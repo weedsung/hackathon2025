@@ -147,3 +147,50 @@ Layout
 - ✅ 어두운 배경 대비 밝은 글자 제공 (WCAG 2.1 AAA 기준 고려)
 
 > 본 IA 문서는 실사용자를 위한 빠른 접근성과 명확한 콘텐츠 흐름을 중심으로 구성되었습니다. 직장인의 반복 업무 부담을 줄이기 위해 모든 정보 구조는 최소 클릭, 최대 맥락 전달을 목표로 설계되었습니다. 
+
+##  현재 폴더 구조 상태
+
+### ✅ **정상적으로 생성된 폴더들:**
+
+**Frontend:**
+```
+frontend/
+├── src/
+│   ├── components/     ✅ 생성됨
+│   └── pages/
+│       └── Dashboard/  ✅ 생성됨
+├── package.json
+└── node_modules/
+```
+
+**Backend:**
+```
+backend/
+├── src/
+│   ├── routes/         ✅ 생성됨
+│   ├── controllers/    ✅ 생성됨
+│   ├── services/       ✅ 생성됨
+│   ├── models/         ✅ 생성됨
+│   ├── middlewares/    ✅ 생성됨
+│   └── utils/          ✅ 생성됨
+├── config/             ✅ 생성됨
+├── package.json
+└── node_modules/
+```
+
+### ❌ **누락된 폴더:**
+- `docs/` 폴더가 없습니다 (삭제된 것 같습니다)
+
+###  **추가로 필요한 폴더들:**
+- `frontend/src/pages/` (Dashboard 외의 페이지들)
+- `frontend/public/` (React 기본 폴더)
+
+---
+
+## 🛠️ **누락된 폴더들을 생성할까요?**
+
+`docs` 폴더와 `frontend/public` 폴더를 다시 만들어드릴까요?
+
+또는 전체 폴더 구조를 다시 한번 깔끔하게 정리해드릴 수도 있습니다.
+
+어떻게 진행하시겠어요? 😊
