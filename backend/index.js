@@ -46,7 +46,7 @@ app.post("/api/review", async (req, res) => {
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4", // 필요 시 "gpt-3.5-turbo"로 변경 가능
+      model: "gpt-3.5-turbo", // 필요 시 "gpt-4"로 변경 가능
       messages: [{ role: "user", content: prompt }],
     });
 
