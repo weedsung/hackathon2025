@@ -1,22 +1,30 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../api/auth';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // 임시로 모든 로그인을 성공으로 처리 (추후 백엔드 연동 시 수정)
-    setTimeout(() => {
+    try {
+      const data = await login(email, password);
+      // 로그인 성공 처리
+      localStorage.setItem('token', data.token); // 토큰 저장
+      localStorage.setItem('userId', data.userId); // userId 저장
       setIsLoading(false);
       navigate('/dashboard');
-    }, 1000);
+    } catch (err) {
+      setError(err.response?.data?.message || '로그인 실패');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -84,6 +92,8 @@ const LoginPage = () => {
             </div>
           </div>
 
+          {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
+
           <button
             type="submit"
             disabled={isLoading}
@@ -113,6 +123,7 @@ const LoginPage = () => {
                 cursor: 'pointer',
                 textDecoration: 'underline'
               }}
+              onClick={() => navigate('/register')}
             >
               회원가입
             </button>

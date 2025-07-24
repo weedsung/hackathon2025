@@ -1,9 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchReplyGuides } from '../../api/replyGuide';
 
-const ManualPage = () => {
+const defaultTemplates = [
+  {
+    id: 1,
+    category: 'apology',
+    title: '늦은 응답 사과',
+    situation: '이메일 답장이 늦었을 때',
+    content: '안녕하세요.\n\n늦은 답변으로 인해 불편을 드려 죄송합니다.\n[구체적인 사유]로 인해 답변이 지연되었습니다.\n\n향후 이런 일이 발생하지 않도록 더욱 주의하겠습니다.\n\n감사합니다.'
+  },
+  {
+    id: 2,
+    category: 'request',
+    title: '정중한 자료 요청',
+    situation: '동료나 거래처에 자료를 요청할 때',
+    content: '안녕하세요.\n\n[프로젝트명] 관련하여 연락드립니다.\n\n[구체적인 자료명]에 대한 자료를 요청드리고 싶습니다.\n가능하시면 [날짜]까지 공유해 주시면 감사하겠습니다.\n\n바쁘신 중에도 협조해 주셔서 감사합니다.'
+  },
+  {
+    id: 3,
+    category: 'response',
+    title: '긍정적 피드백 응답',
+    situation: '칭찬이나 긍정적 피드백을 받았을 때',
+    content: '안녕하세요.\n\n소중한 피드백을 주셔서 진심으로 감사합니다.\n\n앞으로도 더 나은 결과를 위해 최선을 다하겠습니다.\n계속해서 좋은 협력 관계를 유지할 수 있기를 바랍니다.\n\n감사합니다.'
+  },
+  {
+    id: 4,
+    category: 'meeting',
+    title: '회의 일정 조율',
+    situation: '회의 일정을 조율해야 할 때',
+    content: '안녕하세요.\n\n[회의 주제] 관련 회의 일정을 조율하고자 합니다.\n\n제안 가능한 시간:\n- [날짜 시간]\n- [날짜 시간]\n- [날짜 시간]\n\n참석하시기 편한 시간을 알려주시면 감사하겠습니다.\n\n감사합니다.'
+  },
+  {
+    id: 5,
+    category: 'request',
+    title: '업무 협조 요청',
+    situation: '동료에게 업무 도움을 요청할 때',
+    content: '안녕하세요.\n\n[업무명] 진행 중 도움이 필요하여 연락드립니다.\n\n[구체적인 도움 내용]에 대해 조언을 구하고 싶습니다.\n시간이 되실 때 잠깐 이야기할 수 있을까요?\n\n바쁘신 중에 번거롭게 해드려 죄송합니다.\n감사합니다.'
+  }
+];
+
+function ManualPage({ userId }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedIndex, setCopiedIndex] = useState(null);
+  const [templates, setTemplates] = useState(defaultTemplates);
+
+  useEffect(() => {
+    if (!userId) return; // userId 없으면 호출하지 않음
+    fetchReplyGuides(userId)
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setTemplates(data);
+      })
+      .catch(() => {
+        // 에러 발생 시 아무것도 하지 않음(기존 데이터 유지)
+      });
+  }, [userId]);
 
   const categories = [
     { id: 'all', name: '전체', count: 24 },
@@ -11,44 +62,6 @@ const ManualPage = () => {
     { id: 'request', name: '요청', count: 8 },
     { id: 'response', name: '답변', count: 6 },
     { id: 'meeting', name: '회의', count: 5 }
-  ];
-
-  const templates = [
-    {
-      id: 1,
-      category: 'apology',
-      title: '늦은 응답 사과',
-      situation: '이메일 답장이 늦었을 때',
-      content: '안녕하세요.\n\n늦은 답변으로 인해 불편을 드려 죄송합니다.\n[구체적인 사유]로 인해 답변이 지연되었습니다.\n\n향후 이런 일이 발생하지 않도록 더욱 주의하겠습니다.\n\n감사합니다.'
-    },
-    {
-      id: 2,
-      category: 'request',
-      title: '정중한 자료 요청',
-      situation: '동료나 거래처에 자료를 요청할 때',
-      content: '안녕하세요.\n\n[프로젝트명] 관련하여 연락드립니다.\n\n[구체적인 자료명]에 대한 자료를 요청드리고 싶습니다.\n가능하시면 [날짜]까지 공유해 주시면 감사하겠습니다.\n\n바쁘신 중에도 협조해 주셔서 감사합니다.'
-    },
-    {
-      id: 3,
-      category: 'response',
-      title: '긍정적 피드백 응답',
-      situation: '칭찬이나 긍정적 피드백을 받았을 때',
-      content: '안녕하세요.\n\n소중한 피드백을 주셔서 진심으로 감사합니다.\n\n앞으로도 더 나은 결과를 위해 최선을 다하겠습니다.\n계속해서 좋은 협력 관계를 유지할 수 있기를 바랍니다.\n\n감사합니다.'
-    },
-    {
-      id: 4,
-      category: 'meeting',
-      title: '회의 일정 조율',
-      situation: '회의 일정을 조율해야 할 때',
-      content: '안녕하세요.\n\n[회의 주제] 관련 회의 일정을 조율하고자 합니다.\n\n제안 가능한 시간:\n- [날짜 시간]\n- [날짜 시간]\n- [날짜 시간]\n\n참석하시기 편한 시간을 알려주시면 감사하겠습니다.\n\n감사합니다.'
-    },
-    {
-      id: 5,
-      category: 'request',
-      title: '업무 협조 요청',
-      situation: '동료에게 업무 도움을 요청할 때',
-      content: '안녕하세요.\n\n[업무명] 진행 중 도움이 필요하여 연락드립니다.\n\n[구체적인 도움 내용]에 대해 조언을 구하고 싶습니다.\n시간이 되실 때 잠깐 이야기할 수 있을까요?\n\n바쁘신 중에 번거롭게 해드려 죄송합니다.\n감사합니다.'
-    }
   ];
 
   const filteredTemplates = templates.filter(template => {

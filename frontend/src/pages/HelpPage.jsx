@@ -1,42 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchHelpItems } from '../api/help';
+
+const defaultFaqs = [
+  {
+    id: 1,
+    question: '메일 검토는 어떻게 작동하나요?',
+    answer: 'AI가 입력한 이메일 내용을 분석하여 오해의 소지가 있는 표현, 감정적 톤, 문법 오류 등을 찾아내고 개선 방향을 제시합니다. GPT와 Gemini 모델을 활용하여 정확한 분석을 제공합니다.'
+  },
+  {
+    id: 2,
+    question: '답장 템플릿은 어떻게 사용하나요?',
+    answer: '답장 메뉴얼 페이지에서 상황에 맞는 템플릿을 선택하고 복사 버튼을 클릭하여 클립보드에 저장할 수 있습니다. 필요에 따라 내용을 수정해서 사용하세요.'
+  },
+  {
+    id: 3,
+    question: '개인정보는 안전하게 보호되나요?',
+    answer: '네, 모든 이메일 내용은 암호화되어 저장되며, 설정에서 데이터 보관 기간을 조정할 수 있습니다. 원하시면 언제든지 데이터를 삭제하거나 내보낼 수 있습니다.'
+  },
+  {
+    id: 4,
+    question: '하루에 몇 번까지 사용할 수 있나요?',
+    answer: '현재 베타 버전에서는 일일 10회까지 무료로 사용 가능합니다. 향후 유료 플랜에서는 무제한 사용이 가능할 예정입니다.'
+  },
+  {
+    id: 5,
+    question: '분석 결과가 부정확한 경우 어떻게 하나요?',
+    answer: 'AI 분석은 참고용이며, 최종 판단은 사용자가 하시기 바랍니다. 지속적으로 모델을 개선하고 있으며, 피드백을 주시면 더 나은 서비스로 발전할 수 있습니다.'
+  },
+  {
+    id: 6,
+    question: '모바일에서도 사용할 수 있나요?',
+    answer: '네, 반응형 웹 디자인으로 제작되어 모바일, 태블릿에서도 최적화된 환경으로 사용하실 수 있습니다.'
+  }
+];
 
 const HelpPage = () => {
+  const [faqs, setFaqs] = useState(defaultFaqs);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchHelpItems()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setFaqs(data);
+      })
+      .catch(() => {
+        // 에러 발생 시 아무것도 하지 않음(기존 데이터 유지)
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [activeTab, setActiveTab] = useState('guide');
-
-  const faqs = [
-    {
-      id: 1,
-      question: '메일 검토는 어떻게 작동하나요?',
-      answer: 'AI가 입력한 이메일 내용을 분석하여 오해의 소지가 있는 표현, 감정적 톤, 문법 오류 등을 찾아내고 개선 방향을 제시합니다. GPT와 Gemini 모델을 활용하여 정확한 분석을 제공합니다.'
-    },
-    {
-      id: 2,
-      question: '답장 템플릿은 어떻게 사용하나요?',
-      answer: '답장 메뉴얼 페이지에서 상황에 맞는 템플릿을 선택하고 복사 버튼을 클릭하여 클립보드에 저장할 수 있습니다. 필요에 따라 내용을 수정해서 사용하세요.'
-    },
-    {
-      id: 3,
-      question: '개인정보는 안전하게 보호되나요?',
-      answer: '네, 모든 이메일 내용은 암호화되어 저장되며, 설정에서 데이터 보관 기간을 조정할 수 있습니다. 원하시면 언제든지 데이터를 삭제하거나 내보낼 수 있습니다.'
-    },
-    {
-      id: 4,
-      question: '하루에 몇 번까지 사용할 수 있나요?',
-      answer: '현재 베타 버전에서는 일일 10회까지 무료로 사용 가능합니다. 향후 유료 플랜에서는 무제한 사용이 가능할 예정입니다.'
-    },
-    {
-      id: 5,
-      question: '분석 결과가 부정확한 경우 어떻게 하나요?',
-      answer: 'AI 분석은 참고용이며, 최종 판단은 사용자가 하시기 바랍니다. 지속적으로 모델을 개선하고 있으며, 피드백을 주시면 더 나은 서비스로 발전할 수 있습니다.'
-    },
-    {
-      id: 6,
-      question: '모바일에서도 사용할 수 있나요?',
-      answer: '네, 반응형 웹 디자인으로 제작되어 모바일, 태블릿에서도 최적화된 환경으로 사용하실 수 있습니다.'
-    }
-  ];
 
   const guides = [
     {
@@ -279,4 +295,4 @@ const HelpPage = () => {
   );
 };
 
-export default HelpPage; 
+export default HelpPage;

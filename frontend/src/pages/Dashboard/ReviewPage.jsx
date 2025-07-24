@@ -1,40 +1,31 @@
 import React, { useState } from 'react';
+import { submitReview } from '../../api/review';
 
-const ReviewPage = () => {
+function ReviewPage({ userId }) {
   const [emailContent, setEmailContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [error, setError] = useState('');
 
   const handleAnalyze = async () => {
     if (!emailContent.trim()) {
       alert('메일 내용을 입력해주세요.');
       return;
     }
-
+    if (!userId) {
+      alert('로그인 정보가 없습니다. 다시 로그인 해주세요.');
+      return;
+    }
     setIsAnalyzing(true);
-    
-    // 임시 분석 결과 (추후 실제 AI API 연동)
-    setTimeout(() => {
-      setAnalysisResult({
-        overallScore: 85,
-        emotionScore: 'neutral',
-        misunderstandingRisk: 'low',
-        suggestions: [
-          {
-            type: 'warning',
-            text: '"급히 확인해주세요"는 상대방에게 부담을 줄 수 있습니다.',
-            suggestion: '"가능하시면 확인 부탁드립니다"로 수정해보세요.'
-          },
-          {
-            type: 'info',
-            text: '전반적으로 정중한 톤으로 작성되었습니다.',
-            suggestion: '현재 상태를 유지하시면 좋겠습니다.'
-          }
-        ],
-        improvedVersion: emailContent.replace('급히 확인해주세요', '가능하시면 확인 부탁드립니다')
-      });
+    setError('');
+    try {
+      const data = await submitReview(emailContent, userId);
+      setAnalysisResult(data.result);
+    } catch (err) {
+      setError('분석 실패');
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   const clearAll = () => {

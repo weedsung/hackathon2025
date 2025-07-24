@@ -1,45 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchUserSettings, saveUserSettings } from '../../api/user';
 
-const SettingsPage = () => {
-  const [settings, setSettings] = useState({
-    // 프로필 설정
-    name: '김민성',
-    email: 'kim@company.com',
-    department: '개발팀',
-    
-    // 이메일 톤 설정
-    defaultTone: 'polite',
-    
-    // 알림 설정
-    emailNotifications: true,
-    browserNotifications: false,
-    weeklyReport: true,
-    
-    // AI 설정
-    analysisLevel: 'detailed',
-    autoCorrection: true,
-    
-    // 데이터 설정
-    saveHistory: true,
-    dataRetention: '30'
-  });
+const defaultSettings = {
+  name: '김민성',
+  email: 'kim@company.com',
+  department: '개발팀',
+  defaultTone: 'polite',
+  emailNotifications: true,
+  browserNotifications: false,
+  weeklyReport: true,
+  analysisLevel: 'detailed',
+  autoCorrection: true,
+  saveHistory: true,
+  dataRetention: '30'
+};
 
+function SettingsPage({ userId }) {
+  const [settings, setSettings] = useState(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [error, setError] = useState('');
+  // const userId = localStorage.getItem('userId'); // 실제 로그인한 사용자 ID 사용
+
+  useEffect(() => {
+    if (!userId) return; // userId 없으면 호출하지 않음
+    fetchUserSettings(userId)
+      .then((data) => {
+        if (data && typeof data === 'object') setSettings(data);
+      })
+      .catch(() => {
+        // 에러 발생 시 아무것도 하지 않음(기존 데이터 유지)
+      });
+  }, [userId]);
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
+    if (!userId) {
+      setError('로그인 정보가 없습니다. 다시 로그인 해주세요.');
+      return;
+    }
     setIsSaving(true);
-    
-    // 임시 저장 처리 (추후 백엔드 연동)
-    setTimeout(() => {
-      setIsSaving(false);
+    setError('');
+    try {
+      await saveUserSettings(userId, settings);
       setSaveMessage('설정이 저장되었습니다.');
       setTimeout(() => setSaveMessage(''), 3000);
-    }, 1000);
+    } catch (err) {
+      setError('설정 저장 실패');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const exportData = () => {
@@ -49,7 +62,6 @@ const SettingsPage = () => {
       exportDate: new Date().toISOString(),
       version: '1.0'
     };
-    
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -310,6 +322,9 @@ const SettingsPage = () => {
         <div className="flex justify-between items-center" style={{ paddingTop: '24px' }}>
           {saveMessage && (
             <div style={{ color: '#4caf50', fontWeight: '500' }}>{saveMessage}</div>
+          )}
+          {error && (
+            <div style={{ color: '#f44336', fontWeight: '500' }}>{error}</div>
           )}
           <div style={{ marginLeft: 'auto' }}>
             <button

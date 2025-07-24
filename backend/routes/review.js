@@ -1,33 +1,36 @@
-// backend/routes/review.js
 const express = require('express');
 const Review = require('../models/Review');
+const { auth } = require('./user');
 const router = express.Router();
 
-router.post('/', async (req, res) => {
-  try {
-    const { content, userId } = req.body;
+// 메일 검토 요청 (AI 연동은 별도 함수로)
+router.post('/', auth, async (req, res) => {
+  const { emailContent } = req.body;
+  // 1. AI API 호출(생략)
+  // 2. 결과 예시
+  const result = {
+    overallScore: 85,
+    emotionScore: 'neutral',
+    misunderstandingRisk: 'low',
+    suggestions: [],
+    improvedVersion: emailContent // 실제론 AI 결과
+  };
+  const review = new Review({ user: req.user.userId, emailContent, result });
+  await review.save();
+  res.status(201).json(review);
+});
 
-    if (!userId || !content) {
-      return res.status(400).json({ message: 'userId와 content는 필수입니다.' });
-    }
+// 내 분석 히스토리
+router.get('/history', auth, async (req, res) => {
+  const reviews = await Review.find({ user: req.user.userId }).sort({ createdAt: -1 });
+  res.json(reviews);
+});
 
-    // TODO: 실제 AI 분석 결과로 대체
-    const dummyIssues = ['불명확한 표현 존재', '지나치게 딱딱한 어조'];
-    const dummySuggestions = ['표현을 더 명확하게 수정', '좀 더 부드럽게 작성'];
-
-    const review = new Review({
-      userId,
-      content,
-      issues: dummyIssues,
-      suggestions: dummySuggestions
-    });
-
-    await review.save();
-    res.status(201).json(review);
-  } catch (error) {
-    console.error('리뷰 저장 실패:', error);
-    res.status(500).json({ error: '서버 오류로 리뷰 저장에 실패했습니다.' });
-  }
+// 단건 조회
+router.get('/:id', auth, async (req, res) => {
+  const review = await Review.findOne({ _id: req.params.id, user: req.user.userId });
+  if (!review) return res.status(404).json({ message: 'Not found' });
+  res.json(review);
 });
 
 module.exports = router;

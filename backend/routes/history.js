@@ -1,57 +1,35 @@
-// backend/routes/history.js
-const express = require("express");
+const express = require('express');
+const History = require('../models/History');
+const { auth } = require('./user');
 const router = express.Router();
-const History = require("../models/History");
 
-router.post("/", async (req, res) => {
-  try {
-    const { userId, emails, contextLabel } = req.body;
-
-    const history = new History({
-      userId,
-      emails,
-      contextLabel
-    });
-
-    const saved = await history.save();
-    res.status(201).json(saved);
-  } catch (err) {
-    console.error("History 저장 실패:", err.message);
-    res.status(500).json({ error: "DB 저장 중 오류" });
-  }
+// 전체 히스토리
+router.get('/', auth, async (req, res) => {
+  const history = await History.find({ user: req.user.userId }).sort({ date: -1 });
+  res.json(history);
 });
 
-router.get('/', async (req, res) => {
-  try {
-    const { userId, keyword, status, recent, date } = req.query;
-    const filter = {};
+// 단건 조회
+router.get('/:id', auth, async (req, res) => {
+  const item = await History.findOne({ _id: req.params.id, user: req.user.userId });
+  if (!item) return res.status(404).json({ message: 'Not found' });
+  res.json(item);
+});
 
-    if (userId) filter.userId = userId;
-    if (status && status !== '전체') filter.status = status;
-    if (recent === 'true') {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      filter.createdAt = { $gte: sevenDaysAgo };
-    }
-    if (date) {
-      const d = new Date(date);
-      const next = new Date(d);
-      next.setDate(d.getDate() + 1);
-      filter.sentAt = { $gte: d, $lt: next };
-    }
-    if (keyword) {
-      filter.$or = [
-        { title: { $regex: keyword, $options: 'i' } },
-        { content: { $regex: keyword, $options: 'i' } },
-        { recipient: { $regex: keyword, $options: 'i' } }
-      ];
-    }
+// 새 히스토리 저장
+router.post('/', auth, async (req, res) => {
+  const { type, title, content, recipient, score, status, template } = req.body;
+  const item = new History({
+    user: req.user.userId, type, title, content, recipient, score, status, template
+  });
+  await item.save();
+  res.status(201).json(item);
+});
 
-    const histories = await History.find(filter).sort({ sentAt: -1 });
-    res.json(histories);
-  } catch (err) {
-    res.status(500).json({ error: '히스토리 불러오기 실패' });
-  }
+// 삭제
+router.delete('/:id', auth, async (req, res) => {
+  await History.deleteOne({ _id: req.params.id, user: req.user.userId });
+  res.json({ message: 'Deleted' });
 });
 
 module.exports = router;

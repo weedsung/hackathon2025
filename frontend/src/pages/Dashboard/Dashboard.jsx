@@ -6,21 +6,22 @@ import ManualPage from './ManualPage';
 import HistoryPage from './HistoryPage';
 import SettingsPage from './SettingsPage';
 
-const Dashboard = () => {
+function Dashboard() {
+  const userId = localStorage.getItem('userId'); // 실제 로그인한 사용자 ID 사용
   return (
     <div className="dashboard-container">
       <Sidebar />
       <main className="main-content">
         <Routes>
-          <Route path="/review" element={<ReviewPage />} />
-          <Route path="/manual" element={<ManualPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/review" element={<ReviewPage userId={userId} />} />
+          <Route path="/manual" element={<ManualPage userId={userId} />} />
+          <Route path="/history" element={<HistoryPage userId={userId} />} />
+          <Route path="/settings" element={<SettingsPage userId={userId} />} />
           <Route path="/" element={<Navigate to="/dashboard/review" replace />} />
         </Routes>
       </main>
     </div>
   );
-};
+}
 
 export default Dashboard; 
