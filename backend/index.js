@@ -20,7 +20,12 @@ app.get("/", (req, res) => {
 
 // GPT 리뷰 라우터
 app.post("/api/review", async (req, res) => {
-  const { emailText, tone } = req.body;
+  const { emailText, tone, analysisLevel, autoCorrection } = req.body;
+  //console.log("백엔드 수신값:", { tone, analysisLevel, autoCorrection });
+
+  const correctionInstruction = autoCorrection
+    ? '4. 해당 표현을 보다 정중하고 적절한 문장으로 고쳐 improvedVersion 필드에 제시해줘.'
+    : '4. 수정 제안은 하지 마. improvedVersion 필드는 null 또는 빈 문자열로 둬.';
 
   const prompt = `
 너는 이메일 커뮤니케이션 전문가야.
@@ -40,19 +45,30 @@ app.post("/api/review", async (req, res) => {
   "overallScore": 1~100 사이의 숫자
 }
 
+요청 조건:
+- 분석 수준: ${analysisLevel} (${analysisLevel === 'basic' ? '오해 소지 위주 간단 분석' : analysisLevel === 'detailed' ? '감정, 표현 포함 종합 분석' : '문맥과 관계까지 포함한 심층 분석'})
+- 자동 수정: ${autoCorrection ? '예' : '아니오'}
+
+아래 4가지 분석 항목을 모두 포함해줘:
+1. 이메일 내용의 오해 가능성
+2. 감정적인 표현이 있는지
+3. 어조 분석 및 평가
+${correctionInstruction}
+
 이메일 원문:
-"${emailText}"
+"""
+${emailText}
+"""
   `;
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // 필요 시 "gpt-4"로 변경 가능
+      model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
     });
 
     const raw = response.choices[0].message.content;
 
-    // GPT 응답을 JSON으로 파싱
     let parsed;
     try {
       parsed = JSON.parse(raw);
@@ -68,6 +84,8 @@ app.post("/api/review", async (req, res) => {
   }
 });
 
+
 app.listen(port, () => {
   console.log(`✅ Backend server running at http://localhost:${port}`);
 });
+

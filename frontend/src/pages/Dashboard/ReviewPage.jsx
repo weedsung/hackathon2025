@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useSettings } from '../../contexts/SettingsContext';
+
 
 const ReviewPage = () => {
+  const { settings } = useSettings();
   const [emailContent, setEmailContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -13,15 +16,26 @@ const handleAnalyze = async () => {
 
   setIsAnalyzing(true);
 
+  /*
+  console.log('보내는 설정:', {
+  tone: settings.defaultTone,
+  analysisLevel: settings.analysisLevel,
+  autoCorrection: settings.autoCorrection
+});*/
+
+
   try {
     const res = await fetch("http://localhost:5000/api/review", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        emailText: emailContent,
-        tone: "중립적" // 나중에 UI로 선택하게 바꿔도 됨
-      })
-    });
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      emailText: emailContent,
+      tone: settings.defaultTone, // '중립적' 대신
+      analysisLevel: settings.analysisLevel,
+      autoCorrection: settings.autoCorrection
+  })
+});
+
 
     const data = await res.json();
 

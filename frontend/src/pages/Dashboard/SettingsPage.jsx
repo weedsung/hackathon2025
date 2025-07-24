@@ -1,28 +1,10 @@
 import React, { useState } from 'react';
+import { useSettings } from '../../contexts/SettingsContext';
+
 
 const SettingsPage = () => {
-  const [settings, setSettings] = useState({
-    // 프로필 설정
-    name: '김민성',
-    email: 'kim@company.com',
-    department: '개발팀',
-    
-    // 이메일 톤 설정
-    defaultTone: 'polite',
-    
-    // 알림 설정
-    emailNotifications: true,
-    browserNotifications: false,
-    weeklyReport: true,
-    
-    // AI 설정
-    analysisLevel: 'detailed',
-    autoCorrection: true,
-    
-    // 데이터 설정
-    saveHistory: true,
-    dataRetention: '30'
-  });
+  const { settings, setSettings } = useSettings();
+
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
