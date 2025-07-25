@@ -1,41 +1,62 @@
 import React, { useState } from 'react';
+import { useSettings } from '../../contexts/SettingsContext';
+
 
 const ReviewPage = () => {
+  const { settings } = useSettings();
   const [emailContent, setEmailContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
 
-  const handleAnalyze = async () => {
-    if (!emailContent.trim()) {
-      alert('메일 내용을 입력해주세요.');
-      return;
-    }
+const handleAnalyze = async () => {
+  if (!emailContent.trim()) {
+    alert('메일 내용을 입력해주세요.');
+    return;
+  }
 
-    setIsAnalyzing(true);
-    
-    // 임시 분석 결과 (추후 실제 AI API 연동)
-    setTimeout(() => {
-      setAnalysisResult({
-        overallScore: 85,
-        emotionScore: 'neutral',
-        misunderstandingRisk: 'low',
-        suggestions: [
-          {
-            type: 'warning',
-            text: '"급히 확인해주세요"는 상대방에게 부담을 줄 수 있습니다.',
-            suggestion: '"가능하시면 확인 부탁드립니다"로 수정해보세요.'
-          },
-          {
-            type: 'info',
-            text: '전반적으로 정중한 톤으로 작성되었습니다.',
-            suggestion: '현재 상태를 유지하시면 좋겠습니다.'
-          }
-        ],
-        improvedVersion: emailContent.replace('급히 확인해주세요', '가능하시면 확인 부탁드립니다')
-      });
-      setIsAnalyzing(false);
-    }, 2000);
-  };
+  setIsAnalyzing(true);
+
+  /*
+  console.log('보내는 설정:', {
+  tone: settings.defaultTone,
+  analysisLevel: settings.analysisLevel,
+  autoCorrection: settings.autoCorrection
+});*/
+
+
+  try {
+    const res = await fetch("http://localhost:5000/api/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      emailText: emailContent,
+      tone: settings.defaultTone, // '중립적' 대신
+      analysisLevel: settings.analysisLevel,
+      autoCorrection: settings.autoCorrection
+  })
+});
+
+
+    const data = await res.json();
+
+    setAnalysisResult({
+      overallScore: data.overallScore,
+      suggestions: data.suggestions,
+      toneFeedback: data.toneFeedback,
+      improvedVersion: data.improvedVersion
+    });
+  } catch (err) {
+    console.error("검토 요청 실패:", err);
+    setAnalysisResult({
+      overallScore: null,
+      suggestions: [],
+      toneFeedback: "❌ 분석 실패: 서버와의 연결에 문제가 있습니다.",
+      improvedVersion: ""
+    });
+  }
+
+  setIsAnalyzing(false);
+};
 
   const clearAll = () => {
     setEmailContent('');
