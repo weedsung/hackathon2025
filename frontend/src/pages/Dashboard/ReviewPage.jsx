@@ -1,62 +1,45 @@
 import React, { useState } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
+import { submitReview } from '../../api/review';
 
-
-const ReviewPage = () => {
+const ReviewPage = ({ userId }) => {
   const { settings } = useSettings();
   const [emailContent, setEmailContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [error, setError] = useState('');
 
-const handleAnalyze = async () => {
-  if (!emailContent.trim()) {
-    alert('메일 내용을 입력해주세요.');
-    return;
-  }
+  const handleAnalyze = async () => {
+    if (!emailContent.trim()) {
+      alert('메일 내용을 입력해주세요.');
+      return;
+    }
 
-  setIsAnalyzing(true);
+    if (!userId) {
+      alert('로그인 정보가 없습니다. 다시 로그인 해주세요.');
+      return;
+    }
 
-  /*
-  console.log('보내는 설정:', {
-  tone: settings.defaultTone,
-  analysisLevel: settings.analysisLevel,
-  autoCorrection: settings.autoCorrection
-});*/
+    setIsAnalyzing(true);
+    setError('');
 
-
-  try {
-    const res = await fetch("http://localhost:5000/api/review", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      emailText: emailContent,
-      tone: settings.defaultTone, // '중립적' 대신
-      analysisLevel: settings.analysisLevel,
-      autoCorrection: settings.autoCorrection
-  })
-});
-
-
-    const data = await res.json();
-
-    setAnalysisResult({
-      overallScore: data.overallScore,
-      suggestions: data.suggestions,
-      toneFeedback: data.toneFeedback,
-      improvedVersion: data.improvedVersion
-    });
-  } catch (err) {
-    console.error("검토 요청 실패:", err);
-    setAnalysisResult({
-      overallScore: null,
-      suggestions: [],
-      toneFeedback: "❌ 분석 실패: 서버와의 연결에 문제가 있습니다.",
-      improvedVersion: ""
-    });
-  }
-
-  setIsAnalyzing(false);
-};
+    try {
+      // API를 통한 검토 제출
+      const data = await submitReview(emailContent, userId);
+      setAnalysisResult(data.result);
+    } catch (err) {
+      console.error("검토 요청 실패:", err);
+      setError('분석 실패');
+      setAnalysisResult({
+        overallScore: null,
+        suggestions: [],
+        toneFeedback: "❌ 분석 실패: 서버와의 연결에 문제가 있습니다.",
+        improvedVersion: ""
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const clearAll = () => {
     setEmailContent('');
@@ -68,152 +51,98 @@ const handleAnalyze = async () => {
       <div className="page-header">
         <h1 className="page-title">📨 메일 검토</h1>
         <p className="page-description">
-          작성한 이메일의 오해 소지를 AI가 분석하고 개선 방향을 제안합니다.
+          작성한 이메일을 AI가 분석하여 개선점을 제안해드립니다.
         </p>
       </div>
 
-      <div className="grid grid-2">
-        {/* 입력 영역 */}
-        <div className="card">
-          <div className="card-header">
-            <span style={{ fontSize: '20px' }}>✍️</span>
-            <h2 className="card-title">이메일 내용 입력</h2>
-          </div>
-          
-          <div className="form-group">
-            <textarea
-              value={emailContent}
-              onChange={(e) => setEmailContent(e.target.value)}
-              placeholder="검토할 이메일 내용을 붙여넣거나 입력해주세요..."
-              className="form-textarea"
-            />
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <span style={{ fontSize: '14px', color: '#666' }}>
-              {emailContent.length} 글자
-            </span>
-            
-            <div className="flex gap-4">
-              <button
+      <div className="review-container">
+        <div className="input-section">
+          <div className="input-header">
+            <h3>📝 이메일 내용</h3>
+            <div className="input-actions">
+              <button 
+                className="btn btn-secondary" 
                 onClick={clearAll}
-                className="btn btn-secondary"
-              >
-                지우기
-              </button>
-              <button
-                onClick={handleAnalyze}
                 disabled={isAnalyzing}
-                className="btn btn-primary"
               >
-                {isAnalyzing ? (
-                  <>
-                    <div className="loading-spinner"></div>
-                    분석 중...
-                  </>
-                ) : (
-                  <>
-                    🚀 검토 요청
-                  </>
-                )}
+                초기화
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleAnalyze}
+                disabled={isAnalyzing || !emailContent.trim()}
+              >
+                {isAnalyzing ? '분석 중...' : '분석하기'}
               </button>
             </div>
           </div>
+          
+          <textarea
+            className="email-textarea"
+            placeholder="검토할 이메일 내용을 입력하세요..."
+            value={emailContent}
+            onChange={(e) => setEmailContent(e.target.value)}
+            disabled={isAnalyzing}
+          />
         </div>
 
-        {/* 분석 결과 영역 */}
-        <div className="card">
-          <div className="card-header">
-            <span style={{ fontSize: '20px' }}>📊</span>
-            <h2 className="card-title">분석 결과</h2>
+        {error && (
+          <div className="error-message">
+            {error}
           </div>
-          
-          {!analysisResult ? (
-            <div className="text-center" style={{ padding: '60px 20px', color: '#666' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📧</div>
-              <p>메일 내용을 입력하고 검토를 요청해보세요.</p>
-            </div>
-          ) : (
-            <div>
-              {/* 점수 표시 */}
-              <div style={{ 
-                backgroundColor: '#f5f5f5', 
-                borderRadius: '8px', 
-                padding: '16px',
-                marginBottom: '20px'
-              }}>
-                <div className="flex justify-between items-center mb-4">
-                  <span style={{ fontSize: '14px', fontWeight: '500' }}>전체 점수</span>
-                  <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#1976d2' }}>
-                    {analysisResult.overallScore}/100
-                  </span>
-                </div>
-                <div style={{ 
-                  width: '100%', 
-                  backgroundColor: '#e0e0e0', 
-                  borderRadius: '4px', 
-                  height: '8px',
-                  overflow: 'hidden'
-                }}>
-                  <div 
-                    style={{ 
-                      backgroundColor: '#1976d2', 
-                      height: '8px', 
-                      borderRadius: '4px',
-                      width: `${analysisResult.overallScore}%`,
-                      transition: 'width 1s ease'
-                    }}
-                  ></div>
-                </div>
-              </div>
+        )}
 
-              {/* 제안사항 */}
-              <div style={{ marginBottom: '20px' }}>
-                {analysisResult.suggestions.map((suggestion, index) => (
-                  <div 
-                    key={index} 
-                    style={{
-                      padding: '16px',
-                      borderRadius: '8px',
-                      borderLeft: `4px solid ${suggestion.type === 'warning' ? '#ff9800' : '#2196f3'}`,
-                      backgroundColor: suggestion.type === 'warning' ? '#fff3e0' : '#e3f2fd',
-                      marginBottom: '12px'
-                    }}
-                  >
-                    <div className="flex items-start gap-4">
-                      <span style={{ fontSize: '20px' }}>
-                        {suggestion.type === 'warning' ? '⚠️' : '💡'}
-                      </span>
-                      <div>
-                        <p style={{ fontSize: '14px', marginBottom: '4px' }}>{suggestion.text}</p>
-                        <p style={{ fontSize: '14px', fontWeight: '500', color: '#666' }}>
-                          {suggestion.suggestion}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 개선된 버전 */}
-              {analysisResult.improvedVersion && (
-                <div>
-                  <h3 style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                    개선된 버전
-                  </h3>
-                  <div style={{
-                    backgroundColor: '#e8f5e8',
-                    border: '1px solid #4caf50',
-                    borderRadius: '8px',
-                    padding: '16px'
-                  }}>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{analysisResult.improvedVersion}</p>
-                  </div>
+        {analysisResult && (
+          <div className="result-section">
+            <div className="result-header">
+              <h3>📊 분석 결과</h3>
+              {analysisResult.overallScore && (
+                <div className="score-badge">
+                  점수: {analysisResult.overallScore}/100
                 </div>
               )}
             </div>
-          )}
-        </div>
+
+            {analysisResult.toneFeedback && (
+              <div className="feedback-card">
+                <h4>톤 피드백</h4>
+                <p>{analysisResult.toneFeedback}</p>
+              </div>
+            )}
+
+            {analysisResult.improvedVersion && (
+              <div className="improved-card">
+                <h4>개선된 버전</h4>
+                <div className="improved-content">
+                  {analysisResult.improvedVersion}
+                </div>
+              </div>
+            )}
+
+            {analysisResult.suggestions && analysisResult.suggestions.length > 0 && (
+              <div className="suggestions-card">
+                <h4>개선 제안 ({analysisResult.suggestions.length}개)</h4>
+                <div className="suggestions-list">
+                  {analysisResult.suggestions.map((suggestion, index) => (
+                    <div key={index} className={`suggestion-item ${suggestion.type}`}>
+                      <div className="suggestion-header">
+                        <span className={`suggestion-type ${suggestion.type}`}>
+                          {suggestion.type === 'warning' ? '⚠️' : '💡'} {suggestion.type}
+                        </span>
+                      </div>
+                      <p className="suggestion-text">{suggestion.text}</p>
+                      {suggestion.suggestion && (
+                        <div className="suggestion-improvement">
+                          <strong>개선안:</strong> {suggestion.suggestion}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

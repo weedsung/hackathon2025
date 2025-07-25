@@ -13,6 +13,23 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// 라우트 파일 불러오기
+const authRoutes       = require('./routes/auth');
+const reviewRoutes     = require('./routes/review');
+const replyGuideRoutes = require('./routes/replyGuide');
+const historyRoutes    = require('./routes/history');
+const userRoutes       = require('./routes/user').router;
+const helpRoutes       = require('./routes/help');
+const dbConnect = require('./config/dbConnect');
+
+// 라우트 등록
+app.use('/api/auth',        authRoutes);
+app.use('/api/review',      reviewRoutes);
+app.use('/api/reply-guide', replyGuideRoutes);
+app.use('/api/history',     historyRoutes);
+app.use('/api/user',        userRoutes);
+app.use('/api/help',        helpRoutes);
+
 // 기본 라우터
 app.get("/", (req, res) => {
   res.send("Hello from backend!");
@@ -84,8 +101,16 @@ ${emailText}
   }
 });
 
-
-app.listen(port, () => {
-  console.log(`✅ Backend server running at http://localhost:${port}`);
-});
-
+// DB 연결 후 서버 시작
+(async () => {
+  try {
+    await dbConnect();
+    console.log('✅ MongoDB 연결 성공!');
+    app.listen(port, () => {
+      console.log(`✅ Backend server running at http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error('❌ MongoDB 연결 실패:', err);
+    process.exit(1);
+  }
+})();

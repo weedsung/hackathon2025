@@ -1,27 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
+import { fetchUserSettings, saveUserSettings } from '../../api/user';
+import api from '../../api/axios';
 
+const defaultSettings = {
+  name: '',
+  email: '',
+  department: '',
+  defaultTone: 'polite',
+  emailNotifications: true, // 이메일 알림 ON
+  browserNotifications: true, // 브라우저 알림 ON
+  weeklyReport: true, // 주간 리포트 ON
+  analysisLevel: 'detailed',
+  autoCorrection: true,
+  saveHistory: true,
+  dataRetention: '30'
+};
 
-const SettingsPage = () => {
-  const { settings, setSettings } = useSettings();
-
-
+const SettingsPage = ({ userId }) => {
+  const { settings: contextSettings, setSettings: setContextSettings } = useSettings();
+  const [settings, setSettings] = useState(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!userId) return;
+    // 1. 프로필 정보 불러오기
+    api.get('/user/me').then(res => {
+      setSettings(prev => ({
+        ...prev,
+        name: res.data.name || '',
+        email: res.data.email || '',
+        department: res.data.department || ''
+      }));
+    });
+    // 2. 기존 설정 불러오기
+    fetchUserSettings(userId)
+      .then((data) => {
+        if (data && typeof data === 'object') setSettings(prev => ({ ...prev, ...data }));
+      })
+      .catch(() => {});
+  }, [userId]);
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+    // Context도 함께 업데이트
+    setContextSettings(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
+    if (!userId) {
+      setError('로그인 정보가 없습니다. 다시 로그인 해주세요.');
+      return;
+    }
     setIsSaving(true);
-    
-    // 임시 저장 처리 (추후 백엔드 연동)
-    setTimeout(() => {
-      setIsSaving(false);
+    setError('');
+    try {
+      await saveUserSettings(userId, settings);
       setSaveMessage('설정이 저장되었습니다.');
       setTimeout(() => setSaveMessage(''), 3000);
-    }, 1000);
+    } catch (err) {
+      setError('설정 저장 실패');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const exportData = () => {
@@ -31,7 +74,6 @@ const SettingsPage = () => {
       exportDate: new Date().toISOString(),
       version: '1.0'
     };
-    
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -62,32 +104,22 @@ const SettingsPage = () => {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: checked ? '#1976d2' : '#ccc',
+        backgroundColor: checked ? '#2196F3' : '#ccc',
         borderRadius: '24px',
-        transition: 'all 0.3s',
-        '::before': {
-          content: '""',
-          position: 'absolute',
-          height: '20px',
-          width: '20px',
-          left: checked ? '26px' : '2px',
-          bottom: '2px',
-          backgroundColor: 'white',
-          borderRadius: '50%',
-          transition: 'all 0.3s'
-        }
+        transition: '0.4s'
       }}>
         <span style={{
-          content: '""',
           position: 'absolute',
-          height: '20px',
-          width: '20px',
-          left: checked ? '26px' : '2px',
-          bottom: '2px',
+          content: '""',
+          height: '18px',
+          width: '18px',
+          left: '3px',
+          bottom: '3px',
           backgroundColor: 'white',
           borderRadius: '50%',
-          transition: 'all 0.3s'
-        }}></span>
+          transition: '0.4s',
+          transform: checked ? 'translateX(24px)' : 'translateX(0)'
+        }} />
       </span>
     </label>
   );
@@ -95,220 +127,159 @@ const SettingsPage = () => {
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1 className="page-title">⚙️ 내 설정</h1>
+        <h1 className="page-title">⚙️ 설정</h1>
         <p className="page-description">
-          개인화된 이메일 어시스턴트 환경을 설정하세요.
+          이메일 어시스턴트의 개인 설정을 관리합니다.
         </p>
       </div>
 
-      <div>
+      <div className="settings-container">
         {/* 프로필 설정 */}
-        <div className="card">
-          <div className="card-header">
-            <span style={{ fontSize: '20px' }}>👤</span>
-            <h2 className="card-title">프로필 설정</h2>
-          </div>
-          
-          <div className="grid grid-2 gap-4">
-            <div className="form-group">
-              <label className="form-label">이름</label>
-              <input
-                type="text"
-                value={settings.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className="form-input"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">이메일</label>
-              <input
-                type="email"
-                value={settings.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="form-input"
-              />
-            </div>
-            
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">부서</label>
-              <input
-                type="text"
-                value={settings.department}
-                onChange={(e) => handleInputChange('department', e.target.value)}
-                className="form-input"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* 이메일 톤 설정 */}
-        <div className="card">
-          <div className="card-header">
-            <span style={{ fontSize: '20px' }}>🎨</span>
-            <h2 className="card-title">이메일 톤 설정</h2>
-          </div>
-          
+        <div className="settings-section">
+          <h3>👤 프로필 정보</h3>
           <div className="form-group">
-            <label className="form-label">기본 어조</label>
-            <div className="grid grid-3 gap-4">
-              {[
-                { value: 'polite', label: '정중하게', desc: '공손하고 예의바른 톤' },
-                { value: 'friendly', label: '친근하게', desc: '따뜻하고 친밀한 톤' },
-                { value: 'professional', label: '전문적으로', desc: '간결하고 비즈니스적인 톤' }
-              ].map(tone => (
-                <div
-                  key={tone.value}
-                  onClick={() => handleInputChange('defaultTone', tone.value)}
-                  style={{
-                    padding: '16px',
-                    border: `2px solid ${settings.defaultTone === tone.value ? '#1976d2' : '#e0e0e0'}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    backgroundColor: settings.defaultTone === tone.value ? '#e3f2fd' : 'white'
-                  }}
-                >
-                  <div style={{ fontWeight: '500', marginBottom: '4px' }}>{tone.label}</div>
-                  <div style={{ fontSize: '14px', color: '#666' }}>{tone.desc}</div>
-                </div>
-              ))}
-            </div>
+            <label>이름</label>
+            <input
+              type="text"
+              value={settings.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              placeholder="이름을 입력하세요"
+            />
+          </div>
+          <div className="form-group">
+            <label>이메일</label>
+            <input
+              type="email"
+              value={settings.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              placeholder="이메일을 입력하세요"
+            />
+          </div>
+          <div className="form-group">
+            <label>부서</label>
+            <input
+              type="text"
+              value={settings.department}
+              onChange={(e) => handleInputChange('department', e.target.value)}
+              placeholder="부서를 입력하세요"
+            />
           </div>
         </div>
 
-        {/* 알림 설정 */}
-        <div className="card">
-          <div className="card-header">
-            <span style={{ fontSize: '20px' }}>🔔</span>
-            <h2 className="card-title">알림 설정</h2>
+        {/* 이메일 분석 설정 */}
+        <div className="settings-section">
+          <h3>📧 이메일 분석 설정</h3>
+          <div className="form-group">
+            <label>기본 톤</label>
+            <select
+              value={settings.defaultTone}
+              onChange={(e) => handleInputChange('defaultTone', e.target.value)}
+            >
+              <option value="polite">정중한</option>
+              <option value="friendly">친근한</option>
+              <option value="formal">공식적인</option>
+              <option value="casual">일상적인</option>
+            </select>
           </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {[
-              { key: 'emailNotifications', label: '이메일 알림', desc: '분석 완료 시 이메일로 알림' },
-              { key: 'browserNotifications', label: '브라우저 알림', desc: '실시간 브라우저 알림' },
-              { key: 'weeklyReport', label: '주간 리포트', desc: '매주 사용 현황 요약 리포트' }
-            ].map(item => (
-              <div key={item.key} className="flex justify-between items-center">
-                <div>
-                  <div style={{ fontWeight: '500', marginBottom: '4px' }}>{item.label}</div>
-                  <div style={{ fontSize: '14px', color: '#666' }}>{item.desc}</div>
-                </div>
-                <ToggleSwitch
-                  checked={settings[item.key]}
-                  onChange={(e) => handleInputChange(item.key, e.target.checked)}
-                />
-              </div>
-            ))}
+          <div className="form-group">
+            <label>분석 수준</label>
+            <select
+              value={settings.analysisLevel}
+              onChange={(e) => handleInputChange('analysisLevel', e.target.value)}
+            >
+              <option value="basic">기본</option>
+              <option value="detailed">상세</option>
+              <option value="comprehensive">종합</option>
+            </select>
           </div>
-        </div>
-
-        {/* AI 설정 */}
-        <div className="card">
-          <div className="card-header">
-            <span style={{ fontSize: '20px' }}>🤖</span>
-            <h2 className="card-title">AI 분석 설정</h2>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="form-group">
-              <label className="form-label">분석 레벨</label>
-              <select
-                value={settings.analysisLevel}
-                onChange={(e) => handleInputChange('analysisLevel', e.target.value)}
-                className="form-select"
-              >
-                <option value="basic">기본 - 오해 소지만 검토</option>
-                <option value="detailed">상세 - 감정, 톤, 오해 소지 종합 분석</option>
-                <option value="advanced">고급 - 문맥, 관계성까지 고려한 심화 분석</option>
-              </select>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <div>
-                <div style={{ fontWeight: '500', marginBottom: '4px' }}>자동 수정 제안</div>
-                <div style={{ fontSize: '14px', color: '#666' }}>AI가 문제점을 발견하면 자동으로 수정안 제시</div>
-              </div>
+          <div className="form-group">
+            <label className="toggle-label">
+              자동 수정 제안
               <ToggleSwitch
                 checked={settings.autoCorrection}
                 onChange={(e) => handleInputChange('autoCorrection', e.target.checked)}
               />
-            </div>
+            </label>
           </div>
         </div>
 
-        {/* 데이터 설정 */}
-        <div className="card">
-          <div className="card-header">
-            <span style={{ fontSize: '20px' }}>💾</span>
-            <h2 className="card-title">데이터 관리</h2>
+        {/* 알림 설정 */}
+        <div className="settings-section">
+          <h3>🔔 알림 설정</h3>
+          <div className="form-group">
+            <label className="toggle-label">
+              이메일 알림
+              <ToggleSwitch
+                checked={settings.emailNotifications}
+                onChange={(e) => handleInputChange('emailNotifications', e.target.checked)}
+              />
+            </label>
           </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="flex justify-between items-center">
-              <div>
-                <div style={{ fontWeight: '500', marginBottom: '4px' }}>히스토리 저장</div>
-                <div style={{ fontSize: '14px', color: '#666' }}>이메일 분석 기록을 저장하여 재사용 가능</div>
-              </div>
+          <div className="form-group">
+            <label className="toggle-label">
+              브라우저 알림
+              <ToggleSwitch
+                checked={settings.browserNotifications}
+                onChange={(e) => handleInputChange('browserNotifications', e.target.checked)}
+              />
+            </label>
+          </div>
+          <div className="form-group">
+            <label className="toggle-label">
+              주간 리포트
+              <ToggleSwitch
+                checked={settings.weeklyReport}
+                onChange={(e) => handleInputChange('weeklyReport', e.target.checked)}
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* 데이터 관리 */}
+        <div className="settings-section">
+          <h3>💾 데이터 관리</h3>
+          <div className="form-group">
+            <label className="toggle-label">
+              히스토리 저장
               <ToggleSwitch
                 checked={settings.saveHistory}
                 onChange={(e) => handleInputChange('saveHistory', e.target.checked)}
               />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">데이터 보관 기간</label>
-              <select
-                value={settings.dataRetention}
-                onChange={(e) => handleInputChange('dataRetention', e.target.value)}
-                className="form-select"
-                disabled={!settings.saveHistory}
-                style={{ opacity: settings.saveHistory ? 1 : 0.6 }}
-              >
-                <option value="7">7일</option>
-                <option value="30">30일</option>
-                <option value="90">90일</option>
-                <option value="365">1년</option>
-              </select>
-            </div>
-            
-            <div style={{ paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
-              <button
-                onClick={exportData}
-                className="btn btn-secondary"
-                style={{ marginBottom: '8px' }}
-              >
-                💾 데이터 내보내기
-              </button>
-              <p style={{ fontSize: '12px', color: '#666' }}>
-                개인 설정과 히스토리를 JSON 파일로 다운로드합니다.
-              </p>
-            </div>
+            </label>
+          </div>
+          <div className="form-group">
+            <label>데이터 보관 기간</label>
+            <select
+              value={settings.dataRetention}
+              onChange={(e) => handleInputChange('dataRetention', e.target.value)}
+            >
+              <option value="7">7일</option>
+              <option value="30">30일</option>
+              <option value="90">90일</option>
+              <option value="365">1년</option>
+            </select>
           </div>
         </div>
 
-        {/* 저장 버튼 */}
-        <div className="flex justify-between items-center" style={{ paddingTop: '24px' }}>
-          {saveMessage && (
-            <div style={{ color: '#4caf50', fontWeight: '500' }}>{saveMessage}</div>
-          )}
-          <div style={{ marginLeft: 'auto' }}>
+        {/* 액션 버튼 */}
+        <div className="settings-actions">
+          {error && <div className="error-message">{error}</div>}
+          {saveMessage && <div className="success-message">{saveMessage}</div>}
+          
+          <div className="button-group">
             <button
+              className="btn btn-secondary"
+              onClick={exportData}
+              disabled={isSaving}
+            >
+              설정 내보내기
+            </button>
+            <button
+              className="btn btn-primary"
               onClick={handleSave}
               disabled={isSaving}
-              className="btn btn-success"
             >
-              {isSaving ? (
-                <>
-                  <div className="loading-spinner"></div>
-                  저장 중...
-                </>
-              ) : (
-                <>
-                  💾 설정 저장
-                </>
-              )}
+              {isSaving ? '저장 중...' : '설정 저장'}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const ComposePage = () => {
   const [emailData, setEmailData] = useState({
@@ -12,6 +13,28 @@ const ComposePage = () => {
   const [activeTab, setActiveTab] = useState('inbox');
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state && location.state.mail) {
+      setEmailData({
+        to: location.state.mail.recipient || location.state.mail.to || '',
+        subject: location.state.mail.title || location.state.mail.subject || '',
+        content: location.state.mail.content || ''
+      });
+      setIsComposing(true);
+      setSelectedEmail(null);
+    } else if (location.state && location.state.template) {
+      setEmailData({
+        to: '',
+        subject: location.state.template.title || '',
+        content: location.state.template.content || ''
+      });
+      setIsComposing(true);
+      setSelectedEmail(null);
+    }
+    // eslint-disable-next-line
+  }, [location.state]);
 
   // 샘플 메일 데이터
   const sampleEmails = {
@@ -133,6 +156,11 @@ const ComposePage = () => {
       }
     ]
   };
+
+  // 탭별 전체 개수 계산
+  const inboxCount = sampleEmails.inbox.length;
+  const sentCount = sampleEmails.sent.length;
+  const draftsCount = sampleEmails.drafts.length;
 
   const emailTemplates = [
     {
@@ -333,25 +361,54 @@ const ComposePage = () => {
             borderBottom: '1px solid #e0e0e0',
             marginBottom: '16px'
           }}>
-            {['inbox', 'sent', 'drafts'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  borderBottom: activeTab === tab ? '2px solid #1976d2' : '2px solid transparent',
-                  color: activeTab === tab ? '#1976d2' : '#666',
-                  fontWeight: activeTab === tab ? '500' : 'normal',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
-              >
-                {getTabLabel(tab)} ({getCurrentEmails().length})
-              </button>
-            ))}
+            <button
+              onClick={() => setActiveTab('inbox')}
+              style={{
+                flex: 1,
+                padding: '12px 8px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                borderBottom: activeTab === 'inbox' ? '2px solid #1976d2' : '2px solid transparent',
+                color: activeTab === 'inbox' ? '#1976d2' : '#666',
+                fontWeight: activeTab === 'inbox' ? '500' : 'normal',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              받은편지함 ({inboxCount})
+            </button>
+            <button
+              onClick={() => setActiveTab('sent')}
+              style={{
+                flex: 1,
+                padding: '12px 8px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                borderBottom: activeTab === 'sent' ? '2px solid #1976d2' : '2px solid transparent',
+                color: activeTab === 'sent' ? '#1976d2' : '#666',
+                fontWeight: activeTab === 'sent' ? '500' : 'normal',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              보낸편지함 ({sentCount})
+            </button>
+            <button
+              onClick={() => setActiveTab('drafts')}
+              style={{
+                flex: 1,
+                padding: '12px 8px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                borderBottom: activeTab === 'drafts' ? '2px solid #1976d2' : '2px solid transparent',
+                color: activeTab === 'drafts' ? '#1976d2' : '#666',
+                fontWeight: activeTab === 'drafts' ? '500' : 'normal',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              임시보관함 ({draftsCount})
+            </button>
           </div>
 
           {/* 메일 목록 */}

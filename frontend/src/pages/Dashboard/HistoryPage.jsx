@@ -1,73 +1,103 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchHistory } from '../../api/history';
+import { useNavigate } from 'react-router-dom';
 
-const HistoryPage = () => {
+const defaultHistoryData = [
+  {
+    id: 1,
+    type: 'review',
+    title: '프로젝트 일정 연기 요청 메일',
+    content: '안녕하세요. 현재 진행 중인 프로젝트의 일정 조정이 필요하여 연락드립니다...',
+    recipient: '김팀장님',
+    date: '2024-01-15',
+    time: '14:30',
+    score: 92,
+    status: 'sent'
+  },
+  {
+    id: 2,
+    type: 'manual',
+    title: '회의 일정 조율 메일',
+    content: '안녕하세요. 다음 주 팀 회의 일정을 조율하고자 합니다...',
+    recipient: '개발팀 전체',
+    date: '2024-01-14',
+    time: '11:15',
+    template: '회의 일정 조율',
+    status: 'sent'
+  },
+  {
+    id: 3,
+    type: 'review',
+    title: '급히 확인 요청 메일',
+    content: '급히 확인해주세요. 프로젝트 관련 중요한 이슈가 발생했습니다...',
+    recipient: '박과장님',
+    date: '2024-01-13',
+    time: '16:45',
+    score: 65,
+    status: 'draft'
+  },
+  {
+    id: 4,
+    type: 'review',
+    title: '업무 협조 요청',
+    content: '안녕하세요. 현재 담당하고 있는 업무에서 도움이 필요하여 연락드립니다...',
+    recipient: '이대리님',
+    date: '2024-01-12',
+    time: '09:20',
+    score: 88,
+    status: 'sent'
+  },
+  {
+    id: 5,
+    type: 'manual',
+    title: '늦은 응답 사과 메일',
+    content: '안녕하세요. 늦은 답변으로 인해 불편을 드려 죄송합니다...',
+    recipient: '최부장님',
+    date: '2024-01-11',
+    time: '13:55',
+    template: '늦은 응답 사과',
+    status: 'sent'
+  }
+];
+
+function HistoryPage({ userId }) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState('');
+  const [historyData, setHistoryData] = useState(defaultHistoryData);
+  // const userId = 1; // 예시: 실제 서비스에서는 로그인 정보에서 받아야 함
+  // const userId = localStorage.getItem('userId'); // 실제 로그인한 사용자 ID 사용
+
+  useEffect(() => {
+    if (!userId) return; // userId 없으면 호출하지 않음
+    fetchHistory(userId)
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setHistoryData(data);
+      })
+      .catch(() => {
+        // 에러 발생 시 아무것도 하지 않음(기존 데이터 유지)
+      });
+  }, [userId]);
+
+  // 필터별 개수 동적 계산
+  const filterCounts = {
+    all: historyData.length,
+    reviewed: historyData.filter(item => item.type === 'review').length,
+    manual: historyData.filter(item => item.type === 'manual').length,
+    recent: historyData.filter(item => {
+      const itemDate = new Date(item.date);
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return itemDate >= weekAgo;
+    }).length
+  };
 
   const filters = [
-    { id: 'all', name: '전체', count: 15 },
-    { id: 'reviewed', name: '검토함', count: 8 },
-    { id: 'manual', name: '템플릿 사용', count: 5 },
-    { id: 'recent', name: '최근 7일', count: 3 }
-  ];
-
-  const historyData = [
-    {
-      id: 1,
-      type: 'review',
-      title: '프로젝트 일정 연기 요청 메일',
-      content: '안녕하세요. 현재 진행 중인 프로젝트의 일정 조정이 필요하여 연락드립니다...',
-      recipient: '김팀장님',
-      date: '2024-01-15',
-      time: '14:30',
-      score: 92,
-      status: 'sent'
-    },
-    {
-      id: 2,
-      type: 'manual',
-      title: '회의 일정 조율 메일',
-      content: '안녕하세요. 다음 주 팀 회의 일정을 조율하고자 합니다...',
-      recipient: '개발팀 전체',
-      date: '2024-01-14',
-      time: '11:15',
-      template: '회의 일정 조율',
-      status: 'sent'
-    },
-    {
-      id: 3,
-      type: 'review',
-      title: '급히 확인 요청 메일',
-      content: '급히 확인해주세요. 프로젝트 관련 중요한 이슈가 발생했습니다...',
-      recipient: '박과장님',
-      date: '2024-01-13',
-      time: '16:45',
-      score: 65,
-      status: 'draft'
-    },
-    {
-      id: 4,
-      type: 'review',
-      title: '업무 협조 요청',
-      content: '안녕하세요. 현재 담당하고 있는 업무에서 도움이 필요하여 연락드립니다...',
-      recipient: '이대리님',
-      date: '2024-01-12',
-      time: '09:20',
-      score: 88,
-      status: 'sent'
-    },
-    {
-      id: 5,
-      type: 'manual',
-      title: '늦은 응답 사과 메일',
-      content: '안녕하세요. 늦은 답변으로 인해 불편을 드려 죄송합니다...',
-      recipient: '최부장님',
-      date: '2024-01-11',
-      time: '13:55',
-      template: '늦은 응답 사과',
-      status: 'sent'
-    }
+    { id: 'all', name: '전체' },
+    { id: 'reviewed', name: '검토함' },
+    { id: 'manual', name: '템플릿 사용' },
+    { id: 'recent', name: '최근 7일' }
   ];
 
   const filteredHistory = historyData.filter(item => {
@@ -84,8 +114,14 @@ const HistoryPage = () => {
       weekAgo.setDate(weekAgo.getDate() - 7);
       matchesFilter = itemDate >= weekAgo;
     }
-
-    return matchesSearch && matchesFilter;
+    // 날짜 필터 추가
+    let matchesDate = true;
+    if (selectedDate) {
+      // item.date와 selectedDate(YYYY-MM-DD)가 같은 날인지 비교
+      const itemDateStr = new Date(item.date).toISOString().slice(0, 10);
+      matchesDate = itemDateStr === selectedDate;
+    }
+    return matchesSearch && matchesFilter && matchesDate;
   });
 
   const formatDate = (dateStr) => {
@@ -164,7 +200,7 @@ const HistoryPage = () => {
               className={`btn ${selectedFilter === filter.id ? 'btn-primary' : 'btn-secondary'}`}
               style={{ fontSize: '14px' }}
             >
-              {filter.name} ({filter.count})
+              {filter.name} ({filterCounts[filter.id]})
             </button>
           ))}
         </div>
@@ -242,7 +278,7 @@ const HistoryPage = () => {
               borderTop: '1px solid #e0e0e0'
             }}>
               <div className="flex gap-4">
-                <button className="btn btn-primary">
+                <button className="btn btn-primary" onClick={() => navigate('/dashboard/compose', { state: { mail: item } })}>
                   🔄 다시 사용
                 </button>
                 <button className="btn btn-secondary">
