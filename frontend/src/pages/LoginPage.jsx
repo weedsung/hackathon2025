@@ -27,6 +27,15 @@ const LoginPage = () => {
     }
   };
 
+  // 계정없이 이용하기 (테스트용)
+  const handleGuestLogin = () => {
+    // 임시 토큰과 사용자 ID 설정
+    localStorage.setItem('token', 'guest-token-123');
+    localStorage.setItem('userId', 'guest-user');
+    localStorage.setItem('userName', '게스트 사용자');
+    navigate('/dashboard');
+  };
+
   return (
     <div className="login-container">
       <div className="login-card">
@@ -128,6 +137,25 @@ const LoginPage = () => {
               회원가입
             </button>
           </p>
+          
+          {/* 테스트용 게스트 로그인 버튼 */}
+          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
+            <button
+              onClick={handleGuestLogin}
+              className="btn btn-secondary"
+              style={{ 
+                width: '100%',
+                backgroundColor: '#f5f5f5',
+                color: '#666',
+                border: '1px solid #ddd'
+              }}
+            >
+              🚀 계정없이 이용하기 (테스트용)
+            </button>
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+              * 개발/테스트 목적으로만 사용하세요
+            </p>
+          </div>
         </div>
       </div>
     </div>

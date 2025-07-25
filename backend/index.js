@@ -9,13 +9,18 @@ const port = 5000;
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+} else {
+  console.log("⚠️ OPENAI_API_KEY not found. AI features will be disabled.");
+}
 
 // 라우트 파일 불러오기
 const authRoutes       = require('./routes/auth');
-const reviewRoutes     = require('./routes/review');
+// const reviewRoutes     = require('./routes/review'); // 임시 주석 처리
 const replyGuideRoutes = require('./routes/replyGuide');
 const historyRoutes    = require('./routes/history');
 const userRoutes       = require('./routes/user').router;
@@ -24,7 +29,7 @@ const dbConnect = require('./config/dbConnect');
 
 // 라우트 등록
 app.use('/api/auth',        authRoutes);
-app.use('/api/review',      reviewRoutes);
+// app.use('/api/review',      reviewRoutes); // 임시 주석 처리 - 인증 없는 라우트 사용
 app.use('/api/reply-guide', replyGuideRoutes);
 app.use('/api/history',     historyRoutes);
 app.use('/api/user',        userRoutes);
@@ -111,6 +116,8 @@ ${emailText}
     });
   } catch (err) {
     console.error('❌ MongoDB 연결 실패:', err);
-    process.exit(1);
+    app.listen(port, () => {
+      console.log(`✅ Backend server running at http://localhost:${port} (without DB)`);
+    });
   }
 })();
