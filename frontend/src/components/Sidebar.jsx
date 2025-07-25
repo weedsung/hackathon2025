@@ -7,6 +7,12 @@ const Sidebar = () => {
 
   const menuItems = [
     {
+      icon: '✍️',
+      label: '메일 작성',
+      path: '/dashboard/compose',
+      description: 'AI 도움으로 이메일 작성'
+    },
+    {
       icon: '📨',
       label: '메일 검토',
       path: '/dashboard/review',
@@ -41,6 +47,8 @@ const Sidebar = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
     navigate('/login');
   };
 

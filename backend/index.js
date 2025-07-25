@@ -18,7 +18,7 @@ const authRoutes       = require('./routes/auth');
 const reviewRoutes     = require('./routes/review');
 const replyGuideRoutes = require('./routes/replyGuide');
 const historyRoutes    = require('./routes/history');
-const userRoutes       = require('./routes/user');
+const userRoutes       = require('./routes/user').router;
 const helpRoutes       = require('./routes/help');
 const dbConnect = require('./config/dbConnect');
 

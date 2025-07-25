@@ -34,4 +34,18 @@ router.put('/settings', auth, async (req, res) => {
   res.json(user.settings);
 });
 
-module.exports = router;
+// 내 프로필 정보 조회
+router.get('/me', auth, async (req, res) => {
+  const user = await User.findById(req.user.userId);
+  if (!user) return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+  res.json({
+    name: user.name,
+    email: user.email,
+    department: user.department
+  });
+});
+
+module.exports = {
+  router,
+  auth
+};

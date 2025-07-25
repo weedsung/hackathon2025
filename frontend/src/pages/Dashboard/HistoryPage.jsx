@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchHistory } from '../../api/history';
+import { useNavigate } from 'react-router-dom';
 
 const defaultHistoryData = [
   {
@@ -60,6 +61,7 @@ const defaultHistoryData = [
 ];
 
 function HistoryPage({ userId }) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState('');
@@ -78,11 +80,24 @@ function HistoryPage({ userId }) {
       });
   }, [userId]);
 
+  // 필터별 개수 동적 계산
+  const filterCounts = {
+    all: historyData.length,
+    reviewed: historyData.filter(item => item.type === 'review').length,
+    manual: historyData.filter(item => item.type === 'manual').length,
+    recent: historyData.filter(item => {
+      const itemDate = new Date(item.date);
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return itemDate >= weekAgo;
+    }).length
+  };
+
   const filters = [
-    { id: 'all', name: '전체', count: 15 },
-    { id: 'reviewed', name: '검토함', count: 8 },
-    { id: 'manual', name: '템플릿 사용', count: 5 },
-    { id: 'recent', name: '최근 7일', count: 3 }
+    { id: 'all', name: '전체' },
+    { id: 'reviewed', name: '검토함' },
+    { id: 'manual', name: '템플릿 사용' },
+    { id: 'recent', name: '최근 7일' }
   ];
 
   const filteredHistory = historyData.filter(item => {
@@ -99,8 +114,14 @@ function HistoryPage({ userId }) {
       weekAgo.setDate(weekAgo.getDate() - 7);
       matchesFilter = itemDate >= weekAgo;
     }
-
-    return matchesSearch && matchesFilter;
+    // 날짜 필터 추가
+    let matchesDate = true;
+    if (selectedDate) {
+      // item.date와 selectedDate(YYYY-MM-DD)가 같은 날인지 비교
+      const itemDateStr = new Date(item.date).toISOString().slice(0, 10);
+      matchesDate = itemDateStr === selectedDate;
+    }
+    return matchesSearch && matchesFilter && matchesDate;
   });
 
   const formatDate = (dateStr) => {
@@ -179,7 +200,7 @@ function HistoryPage({ userId }) {
               className={`btn ${selectedFilter === filter.id ? 'btn-primary' : 'btn-secondary'}`}
               style={{ fontSize: '14px' }}
             >
-              {filter.name} ({filter.count})
+              {filter.name} ({filterCounts[filter.id]})
             </button>
           ))}
         </div>
@@ -257,7 +278,7 @@ function HistoryPage({ userId }) {
               borderTop: '1px solid #e0e0e0'
             }}>
               <div className="flex gap-4">
-                <button className="btn btn-primary">
+                <button className="btn btn-primary" onClick={() => navigate('/dashboard/compose', { state: { mail: item } })}>
                   🔄 다시 사용
                 </button>
                 <button className="btn btn-secondary">

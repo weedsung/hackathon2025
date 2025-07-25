@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { fetchUserSettings, saveUserSettings } from '../../api/user';
+import api from '../../api/axios';
 
 const defaultSettings = {
-  name: '김민성',
-  email: 'kim@company.com',
-  department: '개발팀',
+  name: '',
+  email: '',
+  department: '',
   defaultTone: 'polite',
-  emailNotifications: true,
-  browserNotifications: false,
-  weeklyReport: true,
+  emailNotifications: true, // 이메일 알림 ON
+  browserNotifications: true, // 브라우저 알림 ON
+  weeklyReport: true, // 주간 리포트 ON
   analysisLevel: 'detailed',
   autoCorrection: true,
   saveHistory: true,
@@ -23,14 +24,22 @@ function SettingsPage({ userId }) {
   // const userId = localStorage.getItem('userId'); // 실제 로그인한 사용자 ID 사용
 
   useEffect(() => {
-    if (!userId) return; // userId 없으면 호출하지 않음
+    if (!userId) return;
+    // 1. 프로필 정보 불러오기
+    api.get('/user/me').then(res => {
+      setSettings(prev => ({
+        ...prev,
+        name: res.data.name || '',
+        email: res.data.email || '',
+        department: res.data.department || ''
+      }));
+    });
+    // 2. 기존 설정 불러오기
     fetchUserSettings(userId)
       .then((data) => {
-        if (data && typeof data === 'object') setSettings(data);
+        if (data && typeof data === 'object') setSettings(prev => ({ ...prev, ...data }));
       })
-      .catch(() => {
-        // 에러 발생 시 아무것도 하지 않음(기존 데이터 유지)
-      });
+      .catch(() => {});
   }, [userId]);
 
   const handleInputChange = (key, value) => {

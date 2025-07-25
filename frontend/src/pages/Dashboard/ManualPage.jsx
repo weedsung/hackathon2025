@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchReplyGuides } from '../../api/replyGuide';
+import { useNavigate } from 'react-router-dom';
 
 const defaultTemplates = [
   {
@@ -44,6 +45,7 @@ function ManualPage({ userId }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [templates, setTemplates] = useState(defaultTemplates);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!userId) return; // userId 없으면 호출하지 않음
@@ -56,13 +58,23 @@ function ManualPage({ userId }) {
       });
   }, [userId]);
 
+  // 카테고리 정의 및 아이콘 매핑
   const categories = [
-    { id: 'all', name: '전체', count: 24 },
-    { id: 'apology', name: '사과', count: 5 },
-    { id: 'request', name: '요청', count: 8 },
-    { id: 'response', name: '답변', count: 6 },
-    { id: 'meeting', name: '회의', count: 5 }
+    { id: 'all', name: '전체', icon: '📂' },
+    { id: 'apology', name: '사과', icon: '🙏' },
+    { id: 'request', name: '요청', icon: '📩' },
+    { id: 'response', name: '답변', icon: '💬' },
+    { id: 'meeting', name: '회의', icon: '📅' }
   ];
+
+  // 카테고리별 개수 동적 계산
+  const categoryCounts = {
+    all: templates.length,
+    apology: templates.filter(t => t.category === 'apology').length,
+    request: templates.filter(t => t.category === 'request').length,
+    response: templates.filter(t => t.category === 'response').length,
+    meeting: templates.filter(t => t.category === 'meeting').length
+  };
 
   const filteredTemplates = templates.filter(template => {
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
@@ -133,7 +145,7 @@ function ManualPage({ userId }) {
                     borderRadius: '12px',
                     marginLeft: 'auto'
                   }}>
-                    {category.count}
+                    {categoryCounts[category.id]}
                   </span>
                 </button>
               ))}
@@ -154,15 +166,26 @@ function ManualPage({ userId }) {
                     {template.situation}
                   </p>
                 </div>
+                {/* 카테고리 라벨 개선 */}
                 <span style={{
-                  padding: '4px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '8px 12px',
                   backgroundColor: '#e3f2fd',
                   color: '#1976d2',
-                  fontSize: '12px',
+                  fontSize: '13px',
                   borderRadius: '16px',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  minWidth: '48px',
+                  minHeight: '48px',
+                  textAlign: 'center',
                 }}>
-                  {categories.find(cat => cat.id === template.category)?.name}
+                  <span style={{ fontSize: '20px', marginBottom: '2px' }}>
+                    {categories.find(cat => cat.id === template.category)?.icon}
+                  </span>
+                  <span>{categories.find(cat => cat.id === template.category)?.name}</span>
                 </span>
               </div>
 
@@ -187,7 +210,10 @@ function ManualPage({ userId }) {
                   {copiedIndex === index ? '✅ 복사됨!' : '📋 복사'}
                 </button>
                 
-                <button className="btn btn-primary">
+                <button
+                  onClick={() => navigate('/dashboard/compose', { state: { template } })}
+                  className="btn btn-primary"
+                >
                   🚀 사용하기
                 </button>
               </div>
