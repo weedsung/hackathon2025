@@ -1,45 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSettings } from '../../contexts/SettingsContext';
+import { fetchUserSettings, saveUserSettings } from '../../api/user';
+import api from '../../api/axios';
 
-const SettingsPage = () => {
-  const [settings, setSettings] = useState({
-    // 프로필 설정
-    name: '김민성',
-    email: 'kim@company.com',
-    department: '개발팀',
-    
-    // 이메일 톤 설정
-    defaultTone: 'polite',
-    
-    // 알림 설정
-    emailNotifications: true,
-    browserNotifications: false,
-    weeklyReport: true,
-    
-    // AI 설정
-    analysisLevel: 'detailed',
-    autoCorrection: true,
-    
-    // 데이터 설정
-    saveHistory: true,
-    dataRetention: '30'
-  });
+const defaultSettings = {
+  name: '',
+  email: '',
+  department: '',
+  defaultTone: 'polite',
+  emailNotifications: true, // 이메일 알림 ON
+  browserNotifications: true, // 브라우저 알림 ON
+  weeklyReport: true, // 주간 리포트 ON
+  analysisLevel: 'detailed',
+  autoCorrection: true,
+  saveHistory: true,
+  dataRetention: '30'
+};
 
+const SettingsPage = ({ userId }) => {
+  const { settings: contextSettings, setSettings: setContextSettings } = useSettings();
+  const [settings, setSettings] = useState(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!userId) return;
+    // 1. 프로필 정보 불러오기
+    api.get('/user/me').then(res => {
+      setSettings(prev => ({
+        ...prev,
+        name: res.data.name || '',
+        email: res.data.email || '',
+        department: res.data.department || ''
+      }));
+    });
+    // 2. 기존 설정 불러오기
+    fetchUserSettings(userId)
+      .then((data) => {
+        if (data && typeof data === 'object') setSettings(prev => ({ ...prev, ...data }));
+      })
+      .catch(() => {});
+  }, [userId]);
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+    // Context도 함께 업데이트
+    setContextSettings(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
+    if (!userId) {
+      setError('로그인 정보가 없습니다. 다시 로그인 해주세요.');
+      return;
+    }
     setIsSaving(true);
-    
-    // 임시 저장 처리 (추후 백엔드 연동)
-    setTimeout(() => {
-      setIsSaving(false);
+    setError('');
+    try {
+      await saveUserSettings(userId, settings);
       setSaveMessage('설정이 저장되었습니다.');
       setTimeout(() => setSaveMessage(''), 3000);
-    }, 1000);
+    } catch (err) {
+      setError('설정 저장 실패');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const exportData = () => {
@@ -49,7 +74,6 @@ const SettingsPage = () => {
       exportDate: new Date().toISOString(),
       version: '1.0'
     };
-    
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -83,21 +107,10 @@ const SettingsPage = () => {
         backgroundColor: checked ? '#1976d2' : '#ccc',
         borderRadius: '24px',
         transition: 'all 0.3s',
-        '::before': {
-          content: '""',
-          position: 'absolute',
-          height: '20px',
-          width: '20px',
-          left: checked ? '26px' : '2px',
-          bottom: '2px',
-          backgroundColor: 'white',
-          borderRadius: '50%',
-          transition: 'all 0.3s'
-        }
       }}>
         <span style={{
-          content: '""',
           position: 'absolute',
+          content: '""',
           height: '20px',
           width: '20px',
           left: checked ? '26px' : '2px',
@@ -262,7 +275,7 @@ const SettingsPage = () => {
             <span style={{ fontSize: '20px' }}>💾</span>
             <h2 className="card-title">데이터 관리</h2>
           </div>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="flex justify-between items-center">
               <div>
@@ -310,6 +323,9 @@ const SettingsPage = () => {
         <div className="flex justify-between items-center" style={{ paddingTop: '24px' }}>
           {saveMessage && (
             <div style={{ color: '#4caf50', fontWeight: '500' }}>{saveMessage}</div>
+          )}
+          {error && (
+            <div style={{ color: '#f44336', fontWeight: '500' }}>{error}</div>
           )}
           <div style={{ marginLeft: 'auto' }}>
             <button

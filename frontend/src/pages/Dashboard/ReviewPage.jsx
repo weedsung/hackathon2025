@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useSettings } from '../../contexts/SettingsContext';
 
-const ReviewPage = () => {
+const ReviewPage = ({ userId }) => {
+  const { settings } = useSettings();
   const [emailContent, setEmailContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [error, setError] = useState('');
 
   const handleAnalyze = async () => {
     if (!emailContent.trim()) {
@@ -12,34 +15,74 @@ const ReviewPage = () => {
     }
 
     setIsAnalyzing(true);
-    
-    // 임시 분석 결과 (추후 실제 AI API 연동)
-    setTimeout(() => {
+    setError('');
+
+    try {
+      const response = await fetch("http://localhost:5000/api/review", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          // 인증이 필요하다면 토큰 추가
+          "Authorization": `Bearer ${localStorage.getItem('token') || 'guest-token'}`
+        },
+        body: JSON.stringify({
+          emailText: emailContent,
+          tone: settings?.defaultTone || 'polite',
+          analysisLevel: settings?.analysisLevel || 'detailed',
+          autoCorrection: settings?.autoCorrection || true
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('인증이 필요합니다. 다시 로그인해주세요.');
+        }
+        throw new Error(`서버 오류: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('API 응답:', data);
+
+      // 응답 데이터 안전하게 처리
       setAnalysisResult({
-        overallScore: 85,
-        emotionScore: 'neutral',
-        misunderstandingRisk: 'low',
-        suggestions: [
+        overallScore: data.overallScore || 75,
+        suggestions: Array.isArray(data.suggestions) ? data.suggestions : [
           {
-            type: 'warning',
-            text: '"급히 확인해주세요"는 상대방에게 부담을 줄 수 있습니다.',
-            suggestion: '"가능하시면 확인 부탁드립니다"로 수정해보세요.'
-          },
-          {
-            type: 'info',
-            text: '전반적으로 정중한 톤으로 작성되었습니다.',
-            suggestion: '현재 상태를 유지하시면 좋겠습니다.'
+            type: "info",
+            text: "AI 분석이 현재 비활성화되어 있습니다.",
+            suggestion: "테스트 모드에서 실행 중입니다."
           }
         ],
-        improvedVersion: emailContent.replace('급히 확인해주세요', '가능하시면 확인 부탁드립니다')
+        toneFeedback: data.toneFeedback || "AI 분석 기능이 현재 데모 모드로 실행 중입니다.",
+        improvedVersion: data.improvedVersion || "데모 모드에서는 개선된 버전을 제공하지 않습니다."
       });
-      setIsAnalyzing(false);
-    }, 2000);
+
+    } catch (err) {
+      console.error("검토 요청 실패:", err);
+      setError(err.message || '분석 중 오류가 발생했습니다.');
+      
+      // 오류 시에도 안전한 기본값 설정
+      setAnalysisResult({
+        overallScore: 0,
+        suggestions: [
+          {
+            type: "warning",
+            text: "서버 연결 실패",
+            suggestion: "네트워크 연결을 확인하고 다시 시도해주세요."
+          }
+        ],
+        toneFeedback: `❌ 분석 실패: ${err.message}`,
+        improvedVersion: ""
+      });
+    }
+
+    setIsAnalyzing(false);
   };
 
   const clearAll = () => {
     setEmailContent('');
     setAnalysisResult(null);
+    setError('');
   };
 
   return (
@@ -65,8 +108,22 @@ const ReviewPage = () => {
               onChange={(e) => setEmailContent(e.target.value)}
               placeholder="검토할 이메일 내용을 붙여넣거나 입력해주세요..."
               className="form-textarea"
+              style={{ minHeight: '200px' }}
             />
           </div>
+          
+          {error && (
+            <div style={{ 
+              color: '#f44336', 
+              backgroundColor: '#ffebee',
+              padding: '12px',
+              borderRadius: '4px',
+              marginBottom: '16px',
+              fontSize: '14px'
+            }}>
+              {error}
+            </div>
+          )}
           
           <div className="flex justify-between items-center">
             <span style={{ fontSize: '14px', color: '#666' }}>
@@ -74,15 +131,16 @@ const ReviewPage = () => {
             </span>
             
             <div className="flex gap-4">
-              <button
+              <button 
                 onClick={clearAll}
                 className="btn btn-secondary"
+                disabled={isAnalyzing}
               >
                 지우기
               </button>
-              <button
+              <button 
                 onClick={handleAnalyze}
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || !emailContent.trim()}
                 className="btn btn-primary"
               >
                 {isAnalyzing ? (
@@ -139,16 +197,35 @@ const ReviewPage = () => {
                       backgroundColor: '#1976d2', 
                       height: '8px', 
                       borderRadius: '4px',
-                      width: `${analysisResult.overallScore}%`,
+                      width: `${Math.max(0, Math.min(100, analysisResult.overallScore || 0))}%`,
                       transition: 'width 1s ease'
                     }}
                   ></div>
                 </div>
               </div>
 
+              {/* 톤 피드백 */}
+              {analysisResult.toneFeedback && (
+                <div style={{ 
+                  backgroundColor: '#e3f2fd', 
+                  borderRadius: '8px', 
+                  padding: '16px',
+                  marginBottom: '20px'
+                }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                    📝 톤 피드백
+                  </h3>
+                  <p style={{ fontSize: '14px', margin: 0 }}>{analysisResult.toneFeedback}</p>
+                </div>
+              )}
+
               {/* 제안사항 */}
-              <div style={{ marginBottom: '20px' }}>
-                {analysisResult.suggestions.map((suggestion, index) => (
+              {analysisResult.suggestions && Array.isArray(analysisResult.suggestions) && analysisResult.suggestions.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '500', marginBottom: '12px' }}>
+                    💡 개선 제안 ({analysisResult.suggestions.length}개)
+                  </h3>
+                  {analysisResult.suggestions.map((suggestion, index) => (
                   <div 
                     key={index} 
                     style={{
@@ -164,21 +241,22 @@ const ReviewPage = () => {
                         {suggestion.type === 'warning' ? '⚠️' : '💡'}
                       </span>
                       <div>
-                        <p style={{ fontSize: '14px', marginBottom: '4px' }}>{suggestion.text}</p>
+                        <p style={{ fontSize: '14px', marginBottom: '4px' }}>{suggestion.text || '제안 내용'}</p>
                         <p style={{ fontSize: '14px', fontWeight: '500', color: '#666' }}>
-                          {suggestion.suggestion}
+                          {suggestion.suggestion || '개선 방향'}
                         </p>
                       </div>
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
 
               {/* 개선된 버전 */}
               {analysisResult.improvedVersion && (
                 <div>
                   <h3 style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                    개선된 버전
+                    ✨ 개선된 버전
                   </h3>
                   <div style={{
                     backgroundColor: '#e8f5e8',
@@ -186,7 +264,7 @@ const ReviewPage = () => {
                     borderRadius: '8px',
                     padding: '16px'
                   }}>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{analysisResult.improvedVersion}</p>
+                    <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{analysisResult.improvedVersion}</p>
                   </div>
                 </div>
               )}
