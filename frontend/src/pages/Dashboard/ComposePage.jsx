@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useSettings } from "../../contexts/SettingsContext";
 
 const ComposePage = () => {
-  const { settings } = useSettings(); 
   const [emailData, setEmailData] = useState({
     to: '',
     subject: '',
@@ -229,32 +227,40 @@ const ComposePage = () => {
     });
   };
 
- const generateSuggestions = async () => {
+  const generateSuggestions = async () => {
     if (!emailData.content.trim()) {
       alert('메일 내용을 입력해주세요.');
       return;
     }
 
     setIsGenerating(true);
-    try {
-      const res = await fetch("http://localhost:5000/api/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          emailText: emailData.content,
-          tone: settings.defaultTone,
-          analysisLevel: settings.analysisLevel,
-          autoCorrection: settings.autoCorrection
-        })
-      });
-      const data = await res.json();
-      setSuggestions(data.suggestions);
-      setEmailData(prev => ({ ...prev, content: data.improvedVersion }));
-    } catch (err) {
-      console.error("AI 추천 실패:", err);
-      alert("추천 요청에 실패했습니다.");
-    }
-    setIsGenerating(false);
+    
+    setTimeout(() => {
+      setSuggestions([
+        {
+          type: 'tone',
+          title: '톤 개선',
+          suggestion: '더 정중한 표현으로 수정하면 좋겠습니다.',
+          before: '확인해주세요',
+          after: '확인 부탁드립니다'
+        },
+        {
+          type: 'structure',
+          title: '구조 개선',
+          suggestion: '인사말을 추가하면 더 자연스러워집니다.',
+          before: '바로 본론으로 시작',
+          after: '"안녕하세요"로 시작하기'
+        },
+        {
+          type: 'clarity',
+          title: '명확성 향상',
+          suggestion: '구체적인 일정을 제시하면 좋겠습니다.',
+          before: '빨리',
+          after: '이번 주 금요일까지'
+        }
+      ]);
+      setIsGenerating(false);
+    }, 1500);
   };
 
   const applySuggestion = (suggestion) => {
@@ -270,35 +276,14 @@ const ComposePage = () => {
     }
   };
 
-  const sendToReview = async () => {
-  if (!emailData.content.trim()) {
-    alert('메일 내용을 입력해주세요.');
-    return;
-  }
-
-  setIsGenerating(true);
-  try {
-    const res = await fetch("http://localhost:5000/api/review", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        emailText: emailData.content,
-        tone: settings.defaultTone,
-        analysisLevel: settings.analysisLevel,
-        autoCorrection: true  // 검토니까 수정 ON
-      })
-    });
-
-    const data = await res.json();
-    setSuggestions(data.suggestions);
-    setEmailData(prev => ({ ...prev, content: data.improvedVersion }));
-  } catch (err) {
-    console.error("검토 실패:", err);
-    alert("검토 요청에 실패했습니다.");
-  }
-  setIsGenerating(false);
-};
-
+  const sendToReview = () => {
+    if (!emailData.content.trim()) {
+      alert('메일 내용을 입력해주세요.');
+      return;
+    }
+    
+    alert('검토 페이지로 이동하는 기능은 추후 구현됩니다.');
+  };
 
   const clearAll = () => {
     setEmailData({
