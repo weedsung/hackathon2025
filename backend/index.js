@@ -2,20 +2,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { OpenAI } = require("openai");
-const { auth } = require('./routes/user');
-const mongoose = require('mongoose');
 
 const app = express();
 const port = 5000;
-
-// 환경변수 검증
-const requiredEnvVars = ['JWT_SECRET'];
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-
-if (missingEnvVars.length > 0) {
-  console.warn('⚠️ Missing environment variables:', missingEnvVars.join(', '));
-  console.warn('⚠️ Using default values. For production, please set these variables.');
-}
 
 app.use(cors());
 app.use(express.json());
@@ -30,46 +19,31 @@ if (process.env.OPENAI_API_KEY) {
 }
 
 // 라우트 파일 불러오기
-const authRoutes       = require('./routes/auth');
-const reviewRoutes     = require('./routes/review');
+const authRoutes = require('./routes/auth');
+// const reviewRoutes     = require('./routes/review'); // 임시 주석 처리
 const replyGuideRoutes = require('./routes/replyGuide');
-const historyRoutes    = require('./routes/history');
-const userRoutes       = require('./routes/user').router;
-const helpRoutes       = require('./routes/help');
-const dbConnect        = require('./config/dbConnect');
-const { initializeReplyGuides, initializeHistory } = require('./config/initData');
+const historyRoutes = require('./routes/history');
+const userRoutes = require('./routes/user').router;
+const helpRoutes = require('./routes/help');
+const dbConnect = require('./config/dbConnect');
 
 // 라우트 등록
-app.use('/api/auth',        authRoutes);
-app.use('/api/review',      reviewRoutes);
+app.use('/api/auth', authRoutes);
+// app.use('/api/review',      reviewRoutes); // 임시 주석 처리 - 인증 없는 라우트 사용
 app.use('/api/reply-guide', replyGuideRoutes);
-app.use('/api/history',     historyRoutes);
-app.use('/api/user',        userRoutes);
-app.use('/api/help',        helpRoutes);
-
-// 헬스 체크 엔드포인트
-app.get("/api/health", (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  res.json({
-    status: 'ok',
-    database: dbStatus,
-    timestamp: new Date().toISOString()
-  });
-});
+app.use('/api/history', historyRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/help', helpRoutes);
 
 // 기본 라우터
 app.get("/", (req, res) => {
   res.send("Hello from backend!");
 });
 
-// GPT 리뷰 라우터 (MongoDB 연동)
-app.post("/api/review", auth, async (req, res) => {
+// GPT 리뷰 라우터
+app.post("/api/review", async (req, res) => {
   const { emailText, tone, analysisLevel, autoCorrection } = req.body;
-  const userId = req.user.userId;
-
-  if (!openai) {
-    return res.status(503).json({ error: "AI 서비스가 일시적으로 사용할 수 없습니다." });
-  }
+  //console.log("백엔드 수신값:", { tone, analysisLevel, autoCorrection });
 
   const correctionInstruction = autoCorrection
     ? '4. 해당 표현을 보다 정중하고 적절한 문장으로 고쳐 improvedVersion 필드에 제시해줘.'
@@ -77,6 +51,7 @@ app.post("/api/review", auth, async (req, res) => {
 
   const prompt = `
 You are a Korean business communication expert. You MUST respond in perfect Korean only. No English words or sentences are allowed in your output.
+
 
 Your task is to analyze and improve the tone, clarity, and appropriateness of the following email, written in Korean, according to the user's preferences.
 
@@ -111,9 +86,10 @@ ${emailText}
 """
 
 ⚠️ Respond ONLY in Korean.
-- Do not use English words or phrases (e.g. "is more polite", "instead of", "clearer tone").
+- Do not use English words or phrases (e.g. “is more polite”, “instead of”, “clearer tone”).
 - All fields in the JSON response (text, suggestion, toneFeedback, etc) MUST be written entirely in Korean.
 `;
+
 
   try {
     const response = await openai.chat.completions.create({
@@ -131,33 +107,6 @@ ${emailText}
       return res.status(500).json({ error: "GPT 응답 JSON 파싱 실패", raw });
     }
 
-    // MongoDB에 결과 저장
-    const Review = require('./models/Review');
-    const review = new Review({
-      user: userId,
-      emailContent: emailText,
-      result: {
-        overallScore: parsed.overallScore || 0,
-        emotionScore: 'neutral',
-        misunderstandingRisk: 'low',
-        suggestions: parsed.suggestions || [],
-        improvedVersion: parsed.improvedVersion || emailText
-      }
-    });
-    await review.save();
-
-    // 히스토리에도 저장
-    const History = require('./models/History');
-    const history = new History({
-      user: userId,
-      type: 'review',
-      title: `이메일 분석 - ${tone} 톤`,
-      content: emailText,
-      score: parsed.overallScore || 0,
-      status: 'sent'
-    });
-    await history.save();
-
     res.json(parsed);
   } catch (error) {
     console.error("❌ GPT 호출 실패:", error);
@@ -170,10 +119,6 @@ ${emailText}
   try {
     await dbConnect();
     console.log('✅ MongoDB 연결 성공!');
-
-    await initializeReplyGuides();
-    await initializeHistory();
-
     app.listen(port, () => {
       console.log(`✅ Backend server running at http://localhost:${port}`);
     });

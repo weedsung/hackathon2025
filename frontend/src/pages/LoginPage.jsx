@@ -10,71 +10,40 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  const { login: userLogin, isAuthenticated, loading } = useUser();
-
-  // 이미 로그인된 사용자는 대시보드로 리다이렉트
-  useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, loading, navigate]);
-
-  // 로딩 중이거나 이미 인증된 경우 로딩 화면 표시
-  if (loading || isAuthenticated) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontSize: '18px',
-        color: '#666'
-      }}>
-        <div>
-          <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
-          로딩 중...
-        </div>
-      </div>
-    );
-  }
+  const { login: loginUser } = useUser();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
+    
     try {
-      console.log('Attempting login with email:', email);
       const data = await login(email, password);
-      console.log('Login API response:', data);
-
-      userLogin(data);
-      console.log('User context updated, navigating to dashboard...');
-
+      
+      // UserContext 업데이트
+      loginUser(data);
+      
       setIsLoading(false);
-
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 100);
-
+      navigate('/dashboard');
     } catch (err) {
-      console.error('Login error:', err);
-      let errorMessage = '로그인 실패';
-
-      if (err.response?.status === 409) {
-        errorMessage = err.response?.data?.message || '이미 로그인된 계정입니다.';
-      } else if (err.response?.status === 401) {
-        errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      setError(errorMessage);
+      setError(err.response?.data?.message || '로그인에 실패했습니다.');
       setIsLoading(false);
     }
+  };
+
+  // 계정없이 이용하기 (테스트용)
+  const handleGuestLogin = () => {
+    const guestData = {
+      token: 'guest-token-123',
+      userId: 'guest-user',
+      name: '게스트 사용자',
+      email: 'guest@example.com',
+      department: '게스트'
+    };
+    
+    // UserContext 업데이트
+    loginUser(guestData);
+    navigate('/dashboard');
   };
 
   return (
@@ -178,6 +147,25 @@ const LoginPage = () => {
               회원가입
             </button>
           </p>
+          
+          {/* 테스트용 게스트 로그인 버튼 */}
+          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
+            <button
+              onClick={handleGuestLogin}
+              className="btn btn-secondary"
+              style={{ 
+                width: '100%',
+                backgroundColor: '#f5f5f5',
+                color: '#666',
+                border: '1px solid #ddd'
+              }}
+            >
+              🚀 계정없이 이용하기 (테스트용)
+            </button>
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+              * 개발/테스트 목적으로만 사용하세요
+            </p>
+          </div>
         </div>
       </div>
     </div>

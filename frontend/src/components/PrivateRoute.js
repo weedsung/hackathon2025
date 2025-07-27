@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useUser();
+  const { user, loading } = useUser();
 
   // 로딩 중일 때는 로딩 화면 표시
   if (loading) {
@@ -25,7 +25,7 @@ const PrivateRoute = ({ children }) => {
   }
 
   // 인증되지 않은 경우 로그인 페이지로 리다이렉트
-  if (!isAuthenticated) {
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 

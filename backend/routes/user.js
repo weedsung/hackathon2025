@@ -20,73 +20,29 @@ function auth(req, res, next) {
 
 // 내 설정 조회
 router.get('/settings', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
-    }
-    res.json(user.settings);
-  } catch (err) {
-    console.error('Settings fetch error:', err);
-    res.status(500).json({ message: '설정 조회 중 오류가 발생했습니다.' });
-  }
+  const user = await User.findById(req.user.userId);
+  res.json(user.settings);
 });
 
 // 내 설정 저장/수정
 router.put('/settings', auth, async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.user.userId,
-      { settings: req.body },
-      { new: true }
-    );
-    if (!user) {
-      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
-    }
-    res.json(user.settings);
-  } catch (err) {
-    console.error('Settings update error:', err);
-    res.status(500).json({ message: '설정 저장 중 오류가 발생했습니다.' });
-  }
+  const user = await User.findByIdAndUpdate(
+    req.user.userId,
+    { settings: req.body },
+    { new: true }
+  );
+  res.json(user.settings);
 });
 
 // 내 프로필 정보 조회
 router.get('/me', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
-    res.json({
-      name: user.name,
-      email: user.email,
-      department: user.department
-    });
-  } catch (err) {
-    console.error('Profile fetch error:', err);
-    res.status(500).json({ message: '프로필 조회 중 오류가 발생했습니다.' });
-  }
-});
-
-// 내 프로필 정보 업데이트
-router.put('/me', auth, async (req, res) => {
-  try {
-    const { name, email, department } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user.userId,
-      { name, email, department },
-      { new: true }
-    );
-    if (!user) {
-      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
-    }
-    res.json({
-      name: user.name,
-      email: user.email,
-      department: user.department
-    });
-  } catch (err) {
-    console.error('Profile update error:', err);
-    res.status(500).json({ message: '프로필 업데이트 중 오류가 발생했습니다.' });
-  }
+  const user = await User.findById(req.user.userId);
+  if (!user) return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+  res.json({
+    name: user.name,
+    email: user.email,
+    department: user.department
+  });
 });
 
 module.exports = {

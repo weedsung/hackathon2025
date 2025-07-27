@@ -10,6 +10,26 @@ export async function register(email, password, name, department) {
   return res.data;
 }
 
+export async function verifyToken() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('토큰이 없습니다.');
+  }
+  
+  const res = await api.get('/auth/verify', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+}
+
+export async function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('userDepartment');
+}
+
 export async function reviewEmail(emailContent, userId) {
   const res = await api.post('/review', { emailContent, userId });
   return res.data;

@@ -1,29 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
-import { useLocation } from 'react-router-dom';
 
-const ReviewPage = () => {
+const ReviewPage = ({ userId }) => {
   const { settings } = useSettings();
-  const location = useLocation();
   const [emailContent, setEmailContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState('');
-
-  // ComposePage에서 전달받은 이메일 데이터 처리
-  useEffect(() => {
-    if (location.state && location.state.emailData) {
-      const { emailData } = location.state;
-      setEmailContent(emailData.content || '');
-      
-      // 자동으로 분석 시작
-      if (emailData.content && emailData.content.trim()) {
-        setTimeout(() => {
-          handleAnalyze();
-        }, 500);
-      }
-    }
-  }, [location.state]);
 
   const handleAnalyze = async () => {
     if (!emailContent.trim()) {
@@ -37,9 +20,10 @@ const ReviewPage = () => {
     try {
       const response = await fetch("http://localhost:5000/api/review", {
         method: "POST",
-        headers: {
+        headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('token')}`
+          // 인증이 필요하다면 토큰 추가
+          "Authorization": `Bearer ${localStorage.getItem('token') || 'guest-token'}`
         },
         body: JSON.stringify({
           emailText: emailContent,
