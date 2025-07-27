@@ -1,10 +1,9 @@
-// src/components/PrivateRoute.js
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 
 const PrivateRoute = ({ children }) => {
-  const { user, loading, isAuthenticated } = useUser();
+  const { isAuthenticated, loading } = useUser();
 
   // 로딩 중일 때는 로딩 화면 표시
   if (loading) {

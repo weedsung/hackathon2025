@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
-import { fetchUserSettings, saveUserSettings } from '../../api/user';
-import api from '../../api/axios';
+import { fetchUserSettings, saveUserSettings, updateUserProfile } from '../../api/user';
 import { useUser } from '../../contexts/UserContext';
 
 const defaultSettings = {
@@ -9,9 +8,9 @@ const defaultSettings = {
   email: '',
   department: '',
   defaultTone: 'polite',
-  emailNotifications: true, // 이메일 알림 ON
-  browserNotifications: true, // 브라우저 알림 ON
-  weeklyReport: true, // 주간 리포트 ON
+  emailNotifications: true,
+  browserNotifications: true,
+  weeklyReport: true,
   analysisLevel: 'detailed',
   autoCorrection: true,
   saveHistory: true,
@@ -19,50 +18,70 @@ const defaultSettings = {
 };
 
 const SettingsPage = () => {
-  const { user } = useUser();
-  const userId = user?.id;
-  const userName = user?.name || '';
-  const userEmail = user?.email || '';
-  const userDepartment = user?.department || '';
-
-  const { settings: contextSettings, setSettings: setContextSettings } = useSettings();
+  const { user, updateUser } = useUser();
+  const { setSettings: setContextSettings } = useSettings();
   const [settings, setSettings] = useState({ ...defaultSettings });
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!userId) return;
-    // 1. 프로필 정보 불러오기 (context에서 우선 적용)
+    if (!user) return;
+
+    // 1. 프로필 정보 설정
     setSettings(prev => ({
       ...prev,
-      name: userName,
-      email: userEmail,
-      department: userDepartment
+      name: user.name || '',
+      email: user.email || '',
+      department: user.department || ''
     }));
+
     // 2. 기존 설정 불러오기
-    fetchUserSettings(userId)
+    fetchUserSettings()
       .then((data) => {
         if (data && typeof data === 'object') setSettings(prev => ({ ...prev, ...data }));
       })
       .catch(() => {});
-  }, [userId, userName, userEmail, userDepartment]);
+  }, [user]);
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
-    // Context도 함께 업데이트
     setContextSettings(prev => ({ ...prev, [key]: value }));
+
+    if (['name', 'email', 'department'].includes(key)) {
+      updateUser({ [key]: value });
+    }
   };
 
   const handleSave = async () => {
-    if (!userId) {
+    if (!user) {
       setError('로그인 정보가 없습니다. 다시 로그인 해주세요.');
       return;
     }
+
     setIsSaving(true);
     setError('');
     try {
-      await saveUserSettings(userId, settings);
+      const profileData = {
+        name: settings.name,
+        email: settings.email,
+        department: settings.department
+      };
+
+      const settingsData = {
+        defaultTone: settings.defaultTone,
+        emailNotifications: settings.emailNotifications,
+        browserNotifications: settings.browserNotifications,
+        weeklyReport: settings.weeklyReport,
+        analysisLevel: settings.analysisLevel,
+        autoCorrection: settings.autoCorrection,
+        saveHistory: settings.saveHistory,
+        dataRetention: settings.dataRetention
+      };
+
+      await updateUserProfile(profileData);
+      await saveUserSettings(settingsData);
+
       setSaveMessage('설정이 저장되었습니다.');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (err) {
@@ -73,7 +92,6 @@ const SettingsPage = () => {
   };
 
   const exportData = () => {
-    // 임시 데이터 내보내기 기능
     const data = {
       settings,
       exportDate: new Date().toISOString(),
@@ -88,12 +106,11 @@ const SettingsPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  // 토글 스위치 컴포넌트
   const ToggleSwitch = ({ checked, onChange }) => (
-    <label style={{ 
-      position: 'relative', 
-      display: 'inline-block', 
-      width: '48px', 
+    <label style={{
+      position: 'relative',
+      display: 'inline-block',
+      width: '48px',
       height: '24px',
       cursor: 'pointer'
     }}>
@@ -111,11 +128,10 @@ const SettingsPage = () => {
         bottom: 0,
         backgroundColor: checked ? '#1976d2' : '#ccc',
         borderRadius: '24px',
-        transition: 'all 0.3s',
+        transition: 'all 0.3s'
       }}>
         <span style={{
           position: 'absolute',
-          content: '""',
           height: '20px',
           width: '20px',
           left: checked ? '26px' : '2px',
@@ -144,7 +160,6 @@ const SettingsPage = () => {
             <span style={{ fontSize: '20px' }}>👤</span>
             <h2 className="card-title">프로필 설정</h2>
           </div>
-          
           <div className="grid grid-2 gap-4">
             <div className="form-group">
               <label className="form-label">이름</label>
@@ -155,7 +170,6 @@ const SettingsPage = () => {
                 className="form-input"
               />
             </div>
-            
             <div className="form-group">
               <label className="form-label">이메일</label>
               <input
@@ -165,7 +179,6 @@ const SettingsPage = () => {
                 className="form-input"
               />
             </div>
-            
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="form-label">부서</label>
               <input
@@ -184,7 +197,6 @@ const SettingsPage = () => {
             <span style={{ fontSize: '20px' }}>🎨</span>
             <h2 className="card-title">이메일 톤 설정</h2>
           </div>
-          
           <div className="form-group">
             <label className="form-label">기본 어조</label>
             <div className="grid grid-3 gap-4">
@@ -219,7 +231,6 @@ const SettingsPage = () => {
             <span style={{ fontSize: '20px' }}>🔔</span>
             <h2 className="card-title">알림 설정</h2>
           </div>
-          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {[
               { key: 'emailNotifications', label: '이메일 알림', desc: '분석 완료 시 이메일로 알림' },
@@ -240,13 +251,12 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        {/* AI 설정 */}
+        {/* AI 분석 설정 */}
         <div className="card">
           <div className="card-header">
             <span style={{ fontSize: '20px' }}>🤖</span>
             <h2 className="card-title">AI 분석 설정</h2>
           </div>
-          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="form-group">
               <label className="form-label">분석 레벨</label>
@@ -260,7 +270,6 @@ const SettingsPage = () => {
                 <option value="advanced">고급 - 문맥, 관계성까지 고려한 심화 분석</option>
               </select>
             </div>
-            
             <div className="flex justify-between items-center">
               <div>
                 <div style={{ fontWeight: '500', marginBottom: '4px' }}>자동 수정 제안</div>
@@ -274,13 +283,12 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        {/* 데이터 설정 */}
+        {/* 데이터 관리 */}
         <div className="card">
           <div className="card-header">
             <span style={{ fontSize: '20px' }}>💾</span>
             <h2 className="card-title">데이터 관리</h2>
           </div>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="flex justify-between items-center">
               <div>
@@ -292,7 +300,6 @@ const SettingsPage = () => {
                 onChange={(e) => handleInputChange('saveHistory', e.target.checked)}
               />
             </div>
-            
             <div className="form-group">
               <label className="form-label">데이터 보관 기간</label>
               <select
@@ -308,7 +315,6 @@ const SettingsPage = () => {
                 <option value="365">1년</option>
               </select>
             </div>
-            
             <div style={{ paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
               <button
                 onClick={exportData}
@@ -326,12 +332,8 @@ const SettingsPage = () => {
 
         {/* 저장 버튼 */}
         <div className="flex justify-between items-center" style={{ paddingTop: '24px' }}>
-          {saveMessage && (
-            <div style={{ color: '#4caf50', fontWeight: '500' }}>{saveMessage}</div>
-          )}
-          {error && (
-            <div style={{ color: '#f44336', fontWeight: '500' }}>{error}</div>
-          )}
+          {saveMessage && <div style={{ color: '#4caf50', fontWeight: '500' }}>{saveMessage}</div>}
+          {error && <div style={{ color: '#f44336', fontWeight: '500' }}>{error}</div>}
           <div style={{ marginLeft: 'auto' }}>
             <button
               onClick={handleSave}
@@ -344,9 +346,7 @@ const SettingsPage = () => {
                   저장 중...
                 </>
               ) : (
-                <>
-                  💾 설정 저장
-                </>
+                <>💾 설정 저장</>
               )}
             </button>
           </div>
@@ -356,4 +356,4 @@ const SettingsPage = () => {
   );
 };
 
-export default SettingsPage; 
+export default SettingsPage;
