@@ -50,7 +50,8 @@ app.post("/api/review", async (req, res) => {
     : '4. 수정 제안은 하지 마. improvedVersion 필드는 null 또는 빈 문자열로 둬.';
 
   const prompt = `
-You are an expert in professional business email writing and communication.
+You are a Korean business communication expert. You MUST respond in perfect Korean only. No English words or sentences are allowed in your output.
+
 
 Your task is to analyze and improve the tone, clarity, and appropriateness of the following email, written in Korean, according to the user's preferences.
 
@@ -84,9 +85,9 @@ Original Email:
 ${emailText}
 """
 
-Respond ONLY in Korean. The improved email and all suggestions must be in natural, polite, and professional Korean.
-Do not explain anything outside the JSON structure.
-
+⚠️ Respond ONLY in Korean.
+- Do not use English words or phrases (e.g. “is more polite”, “instead of”, “clearer tone”).
+- All fields in the JSON response (text, suggestion, toneFeedback, etc) MUST be written entirely in Korean.
 `;
 
 
