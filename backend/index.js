@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const { OpenAI } = require("openai");
 const { auth } = require('./routes/user');
-const mongoose = require('mongoose'); // Added for health check
+const mongoose = require('mongoose');
 
 const app = express();
 const port = 5000;
@@ -36,7 +36,7 @@ const replyGuideRoutes = require('./routes/replyGuide');
 const historyRoutes    = require('./routes/history');
 const userRoutes       = require('./routes/user').router;
 const helpRoutes       = require('./routes/help');
-const dbConnect = require('./config/dbConnect');
+const dbConnect        = require('./config/dbConnect');
 const { initializeReplyGuides, initializeHistory } = require('./config/initData');
 
 // 라우트 등록
@@ -48,20 +48,6 @@ app.use('/api/user',        userRoutes);
 app.use('/api/help',        helpRoutes);
 
 // 헬스 체크 엔드포인트
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    message: 'Server is running'
-  });
-});
-
-// 기본 라우터
-app.get("/", (req, res) => {
-  res.send("Hello from backend!");
-});
-
-// 헬스체크 API
 app.get("/api/health", (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   res.json({
@@ -69,6 +55,11 @@ app.get("/api/health", (req, res) => {
     database: dbStatus,
     timestamp: new Date().toISOString()
   });
+});
+
+// 기본 라우터
+app.get("/", (req, res) => {
+  res.send("Hello from backend!");
 });
 
 // GPT 리뷰 라우터 (MongoDB 연동)
@@ -86,7 +77,6 @@ app.post("/api/review", auth, async (req, res) => {
 
   const prompt = `
 You are a Korean business communication expert. You MUST respond in perfect Korean only. No English words or sentences are allowed in your output.
-
 
 Your task is to analyze and improve the tone, clarity, and appropriateness of the following email, written in Korean, according to the user's preferences.
 
@@ -180,13 +170,10 @@ ${emailText}
   try {
     await dbConnect();
     console.log('✅ MongoDB 연결 성공!');
-    
-    // ReplyGuide 초기 데이터 설정
+
     await initializeReplyGuides();
-    
-    // History 초기 데이터 설정
     await initializeHistory();
-    
+
     app.listen(port, () => {
       console.log(`✅ Backend server running at http://localhost:${port}`);
     });
