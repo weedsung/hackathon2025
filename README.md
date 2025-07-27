@@ -1,4 +1,4 @@
-# 📋 PaperPilot - 이메일 커뮤니케이션 AI 어시스턴트 PRD
+# 📋 메일체크 AI - 이메일 커뮤니케이션 AI 어시스턴트 PRD
 
 > **Product Requirements Document v1.0**  
 > 업데이트: 2025년 7월
