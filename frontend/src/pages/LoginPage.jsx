@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
+import { useUser } from '../contexts/UserContext';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -9,31 +10,46 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login: userLogin } = useUser();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
     try {
+      console.log('Attempting login with email:', email);
       const data = await login(email, password);
-      // 로그인 성공 처리
-      localStorage.setItem('token', data.token); // 토큰 저장
-      localStorage.setItem('userId', data.userId); // userId 저장
+      console.log('Login API response:', data);
+      
+      // 로그인 성공 처리 - UserContext 사용
+      userLogin(data);
+      console.log('User context updated, navigating to dashboard...');
+      
       setIsLoading(false);
-      navigate('/dashboard');
+      
+      // 약간의 지연 후 네비게이션 (상태 업데이트 완료 대기)
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 100);
+      
     } catch (err) {
-      setError(err.response?.data?.message || '로그인 실패');
+      console.error('Login error:', err);
+      let errorMessage = '로그인 실패';
+      
+      if (err.response?.status === 409) {
+        errorMessage = err.response?.data?.message || '이미 로그인된 계정입니다.';
+      } else if (err.response?.status === 401) {
+        errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
     }
-  };
-
-  // 계정없이 이용하기 (테스트용)
-  const handleGuestLogin = () => {
-    // 임시 토큰과 사용자 ID 설정
-    localStorage.setItem('token', 'guest-token-123');
-    localStorage.setItem('userId', 'guest-user');
-    localStorage.setItem('userName', '게스트 사용자');
-    navigate('/dashboard');
   };
 
   return (
@@ -139,6 +155,7 @@ const LoginPage = () => {
           </p>
           
           {/* 테스트용 게스트 로그인 버튼 */}
+          {/*
           <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
             <button
               onClick={handleGuestLogin}
@@ -156,6 +173,7 @@ const LoginPage = () => {
               * 개발/테스트 목적으로만 사용하세요
             </p>
           </div>
+          */}
         </div>
       </div>
     </div>

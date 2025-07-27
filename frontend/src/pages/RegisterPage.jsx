@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register } from '../api/auth';
+import { useUser } from '../contexts/UserContext';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -10,6 +11,7 @@ const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login: userLogin } = useUser();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,12 +20,10 @@ const RegisterPage = () => {
     try {
       const data = await register(email, password, name, department);
       setIsLoading(false);
-      // 회원가입 성공 시 userId 저장 (백엔드에서 userId 반환한다고 가정)
-      if (data && data.userId) {
-        localStorage.setItem('userId', data.userId);
-      }
-      alert('회원가입이 완료되었습니다. 로그인 해주세요.');
-      navigate('/login');
+      // 회원가입 성공 시 자동 로그인
+      userLogin(data);
+      alert('회원가입이 완료되었습니다. 자동으로 로그인됩니다.');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || '회원가입 실패');
       setIsLoading(false);

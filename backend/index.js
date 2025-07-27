@@ -2,9 +2,20 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { OpenAI } = require("openai");
+const { auth } = require('./routes/user');
+const mongoose = require('mongoose'); // Added for health check
 
 const app = express();
 const port = 5000;
+
+// 환경변수 검증
+const requiredEnvVars = ['JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.warn('⚠️ Missing environment variables:', missingEnvVars.join(', '));
+  console.warn('⚠️ Using default values. For production, please set these variables.');
+}
 
 app.use(cors());
 app.use(express.json());
@@ -20,16 +31,17 @@ if (process.env.OPENAI_API_KEY) {
 
 // 라우트 파일 불러오기
 const authRoutes       = require('./routes/auth');
-// const reviewRoutes     = require('./routes/review'); // 임시 주석 처리
+const reviewRoutes     = require('./routes/review');
 const replyGuideRoutes = require('./routes/replyGuide');
 const historyRoutes    = require('./routes/history');
 const userRoutes       = require('./routes/user').router;
 const helpRoutes       = require('./routes/help');
 const dbConnect = require('./config/dbConnect');
+const { initializeReplyGuides, initializeHistory } = require('./config/initData');
 
 // 라우트 등록
 app.use('/api/auth',        authRoutes);
-// app.use('/api/review',      reviewRoutes); // 임시 주석 처리 - 인증 없는 라우트 사용
+app.use('/api/review',      reviewRoutes);
 app.use('/api/reply-guide', replyGuideRoutes);
 app.use('/api/history',     historyRoutes);
 app.use('/api/user',        userRoutes);
@@ -40,10 +52,24 @@ app.get("/", (req, res) => {
   res.send("Hello from backend!");
 });
 
-// GPT 리뷰 라우터
-app.post("/api/review", async (req, res) => {
+// 헬스체크 API
+app.get("/api/health", (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({
+    status: 'ok',
+    database: dbStatus,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// GPT 리뷰 라우터 (MongoDB 연동)
+app.post("/api/review", auth, async (req, res) => {
   const { emailText, tone, analysisLevel, autoCorrection } = req.body;
-  //console.log("백엔드 수신값:", { tone, analysisLevel, autoCorrection });
+  const userId = req.user.userId;
+
+  if (!openai) {
+    return res.status(503).json({ error: "AI 서비스가 일시적으로 사용할 수 없습니다." });
+  }
 
   const correctionInstruction = autoCorrection
     ? '4. 해당 표현을 보다 정중하고 적절한 문장으로 고쳐 improvedVersion 필드에 제시해줘.'
@@ -99,6 +125,33 @@ ${emailText}
       return res.status(500).json({ error: "GPT 응답 JSON 파싱 실패", raw });
     }
 
+    // MongoDB에 결과 저장
+    const Review = require('./models/Review');
+    const review = new Review({
+      user: userId,
+      emailContent: emailText,
+      result: {
+        overallScore: parsed.overallScore || 0,
+        emotionScore: 'neutral',
+        misunderstandingRisk: 'low',
+        suggestions: parsed.suggestions || [],
+        improvedVersion: parsed.improvedVersion || emailText
+      }
+    });
+    await review.save();
+
+    // 히스토리에도 저장
+    const History = require('./models/History');
+    const history = new History({
+      user: userId,
+      type: 'review',
+      title: `이메일 분석 - ${tone} 톤`,
+      content: emailText,
+      score: parsed.overallScore || 0,
+      status: 'sent'
+    });
+    await history.save();
+
     res.json(parsed);
   } catch (error) {
     console.error("❌ GPT 호출 실패:", error);
@@ -111,6 +164,13 @@ ${emailText}
   try {
     await dbConnect();
     console.log('✅ MongoDB 연결 성공!');
+    
+    // ReplyGuide 초기 데이터 설정
+    await initializeReplyGuides();
+    
+    // History 초기 데이터 설정
+    await initializeHistory();
+    
     app.listen(port, () => {
       console.log(`✅ Backend server running at http://localhost:${port}`);
     });

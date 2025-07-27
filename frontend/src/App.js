@@ -10,9 +10,6 @@ import { UserProvider } from './contexts/UserContext';
 import PrivateRoute from './components/PrivateRoute';
 import { SettingsProvider } from './contexts/SettingsContext'; 
 
-console.log('PrivateRoute:', PrivateRoute);
-console.log('RegisterPage:', RegisterPage);
-
 function App() {
   return (
     <UserProvider>
@@ -35,8 +32,8 @@ function App() {
                 }
               />
 
-              {/* 기본 경로 → 대시보드 */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* 기본 경로 → 로그인 페이지 */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
             </Routes>
           </div>
         </Router>

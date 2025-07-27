@@ -5,7 +5,7 @@ const router = express.Router();
 
 // 메일 검토 요청 (AI 연동은 별도 함수로)
 router.post('/', auth, async (req, res) => {
-  const { emailContent } = req.body;
+  const { emailContent, tone, analysisLevel, autoCorrection } = req.body;
   // 1. AI API 호출(생략)
   // 2. 결과 예시
   const result = {
@@ -15,7 +15,7 @@ router.post('/', auth, async (req, res) => {
     suggestions: [],
     improvedVersion: emailContent // 실제론 AI 결과
   };
-  const review = new Review({ user: req.user.userId, emailContent, result });
+  const review = new Review({ user: req.user.userId, emailContent, result, tone, analysisLevel, autoCorrection });
   await review.save();
   res.status(201).json(review);
 });

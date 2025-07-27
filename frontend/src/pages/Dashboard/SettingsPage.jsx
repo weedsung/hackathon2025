@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
-import { fetchUserSettings, saveUserSettings } from '../../api/user';
-import api from '../../api/axios';
+import { useUser } from '../../contexts/UserContext';
+import { fetchUserSettings, saveUserSettings, updateUserProfile } from '../../api/user';
 
 const defaultSettings = {
   name: '',
@@ -17,47 +17,76 @@ const defaultSettings = {
   dataRetention: '30'
 };
 
-const SettingsPage = ({ userId }) => {
-  const { settings: contextSettings, setSettings: setContextSettings } = useSettings();
+const SettingsPage = () => {
+  const { setSettings: setContextSettings } = useSettings();
+  const { user, updateUser } = useUser();
   const [settings, setSettings] = useState(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!userId) return;
-    // 1. 프로필 정보 불러오기
-    api.get('/user/me').then(res => {
-      setSettings(prev => ({
-        ...prev,
-        name: res.data.name || '',
-        email: res.data.email || '',
-        department: res.data.department || ''
-      }));
-    });
+    if (!user) return;
+    
+    // 1. 프로필 정보 설정 (UserContext에서 가져온 정보 사용)
+    setSettings(prev => ({
+      ...prev,
+      name: user.name || '',
+      email: user.email || '',
+      department: user.department || ''
+    }));
+    
     // 2. 기존 설정 불러오기
-    fetchUserSettings(userId)
+    fetchUserSettings()
       .then((data) => {
         if (data && typeof data === 'object') setSettings(prev => ({ ...prev, ...data }));
       })
       .catch(() => {});
-  }, [userId]);
+  }, [user]);
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
     // Context도 함께 업데이트
     setContextSettings(prev => ({ ...prev, [key]: value }));
+    
+    // 프로필 정보가 변경되면 UserContext도 업데이트
+    if (['name', 'email', 'department'].includes(key)) {
+      updateUser({ [key]: value });
+    }
   };
 
   const handleSave = async () => {
-    if (!userId) {
+    if (!user) {
       setError('로그인 정보가 없습니다. 다시 로그인 해주세요.');
       return;
     }
     setIsSaving(true);
     setError('');
     try {
-      await saveUserSettings(userId, settings);
+      // 프로필 정보와 설정을 분리해서 저장
+      const profileData = {
+        name: settings.name,
+        email: settings.email,
+        department: settings.department
+      };
+      
+      const settingsData = {
+        defaultTone: settings.defaultTone,
+        emailNotifications: settings.emailNotifications,
+        browserNotifications: settings.browserNotifications,
+        weeklyReport: settings.weeklyReport,
+        analysisLevel: settings.analysisLevel,
+        autoCorrection: settings.autoCorrection,
+        saveHistory: settings.saveHistory,
+        dataRetention: settings.dataRetention
+      };
+
+      // 프로필 정보 업데이트
+      await updateUserProfile(profileData);
+      
+      // 설정 정보 업데이트
+      await saveUserSettings(settingsData);
+      
       setSaveMessage('설정이 저장되었습니다.');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (err) {
