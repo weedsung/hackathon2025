@@ -19,21 +19,21 @@ if (process.env.OPENAI_API_KEY) {
 }
 
 // 라우트 파일 불러오기
-const authRoutes       = require('./routes/auth');
+const authRoutes = require('./routes/auth');
 // const reviewRoutes     = require('./routes/review'); // 임시 주석 처리
 const replyGuideRoutes = require('./routes/replyGuide');
-const historyRoutes    = require('./routes/history');
-const userRoutes       = require('./routes/user').router;
-const helpRoutes       = require('./routes/help');
+const historyRoutes = require('./routes/history');
+const userRoutes = require('./routes/user').router;
+const helpRoutes = require('./routes/help');
 const dbConnect = require('./config/dbConnect');
 
 // 라우트 등록
-app.use('/api/auth',        authRoutes);
+app.use('/api/auth', authRoutes);
 // app.use('/api/review',      reviewRoutes); // 임시 주석 처리 - 인증 없는 라우트 사용
 app.use('/api/reply-guide', replyGuideRoutes);
-app.use('/api/history',     historyRoutes);
-app.use('/api/user',        userRoutes);
-app.use('/api/help',        helpRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/help', helpRoutes);
 
 // 기본 라우터
 app.get("/", (req, res) => {
@@ -50,38 +50,45 @@ app.post("/api/review", async (req, res) => {
     : '4. 수정 제안은 하지 마. improvedVersion 필드는 null 또는 빈 문자열로 둬.';
 
   const prompt = `
-너는 이메일 커뮤니케이션 전문가야.
+You are an expert in professional business email writing and communication.
 
-다음 이메일을 '${tone}' 톤으로 분석해서 아래 JSON 형식으로 응답해줘:
+Your task is to analyze and improve the tone, clarity, and appropriateness of the following email, written in Korean, according to the user's preferences.
 
+Please respond in the following strict JSON format:
 {
-  "improvedVersion": "톤에 맞게 다시 쓴 이메일 문장",
+  "improvedVersion": "The entire email rewritten in more polite, natural, and clear Korean",
   "suggestions": [
     {
-      "type": "warning 또는 info",
-      "text": "문제가 되는 문장 설명",
-      "suggestion": "대안 문장"
+      "type": "warning or info",
+      "text": "Explanation of the issue in the original sentence",
+      "suggestion": "Suggested alternative sentence"
     }
   ],
-  "toneFeedback": "전반적인 톤에 대한 평가 문장",
-  "overallScore": 1~100 사이의 숫자
+  "toneFeedback": "Overall evaluation of the tone and communication effectiveness",
+  "overallScore": 1~100 (based on clarity, professionalism, and tone)
 }
 
-요청 조건:
-- 분석 수준: ${analysisLevel} (${analysisLevel === 'basic' ? '오해 소지 위주 간단 분석' : analysisLevel === 'detailed' ? '감정, 표현 포함 종합 분석' : '문맥과 관계까지 포함한 심층 분석'})
-- 자동 수정: ${autoCorrection ? '예' : '아니오'}
+Guidelines:
+- Keep the original meaning of each sentence, but rewrite them in a more polite, natural, and fluent Korean business style.
+- Avoid repeating exactly the same sentence in the improved version unless it is already perfect — always aim to improve.
+- Do not include explanations or any additional text outside the JSON block.
+- Suggestions should align with modern, professional Korean email etiquette.
 
-아래 4가지 분석 항목을 모두 포함해줘:
-1. 이메일 내용의 오해 가능성
-2. 감정적인 표현이 있는지
-3. 어조 분석 및 평가
-${correctionInstruction}
+User settings:
+- Tone: '${tone}'
+- Analysis Level: '${analysisLevel}' (${analysisLevel === 'basic' ? 'Simple analysis focusing on misunderstandings' : analysisLevel === 'detailed' ? 'Detailed analysis including emotional tone and clarity' : 'In-depth analysis including context and intent'})
+- Auto Correction: ${autoCorrection ? 'Enabled' : 'Disabled'}
 
-이메일 원문:
+Original Email:
 """
 ${emailText}
 """
-  `;
+
+Respond ONLY in Korean. The improved email and all suggestions must be in natural, polite, and professional Korean.
+Do not explain anything outside the JSON structure.
+
+`;
+
 
   try {
     const response = await openai.chat.completions.create({
