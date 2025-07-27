@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+<<<<<<< HEAD
 import { useSettings } from "../../contexts/SettingsContext";
 
 
 const ComposePage = () => {
   const { settings } = useSettings();
+=======
+
+const ComposePage = () => {
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
   const [emailData, setEmailData] = useState({
     to: '',
     subject: '',
@@ -237,6 +242,7 @@ const ComposePage = () => {
     }
 
     setIsGenerating(true);
+<<<<<<< HEAD
     try {
       // 1) 전체 개선본 받아오기
       const res = await fetch("http://localhost:5000/api/review", {
@@ -322,6 +328,59 @@ const ComposePage = () => {
 };
 
 
+=======
+    
+    setTimeout(() => {
+      setSuggestions([
+        {
+          type: 'tone',
+          title: '톤 개선',
+          suggestion: '더 정중한 표현으로 수정하면 좋겠습니다.',
+          before: '확인해주세요',
+          after: '확인 부탁드립니다'
+        },
+        {
+          type: 'structure',
+          title: '구조 개선',
+          suggestion: '인사말을 추가하면 더 자연스러워집니다.',
+          before: '바로 본론으로 시작',
+          after: '"안녕하세요"로 시작하기'
+        },
+        {
+          type: 'clarity',
+          title: '명확성 향상',
+          suggestion: '구체적인 일정을 제시하면 좋겠습니다.',
+          before: '빨리',
+          after: '이번 주 금요일까지'
+        }
+      ]);
+      setIsGenerating(false);
+    }, 1500);
+  };
+
+  const applySuggestion = (suggestion) => {
+    if (suggestion.before && suggestion.after) {
+      const updatedContent = emailData.content.replace(
+        suggestion.before,
+        suggestion.after
+      );
+      setEmailData(prev => ({
+        ...prev,
+        content: updatedContent
+      }));
+    }
+  };
+
+  const sendToReview = () => {
+    if (!emailData.content.trim()) {
+      alert('메일 내용을 입력해주세요.');
+      return;
+    }
+    
+    alert('검토 페이지로 이동하는 기능은 추후 구현됩니다.');
+  };
+
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
   const clearAll = () => {
     setEmailData({
       to: '',
@@ -361,7 +420,11 @@ const ComposePage = () => {
   const getTabLabel = (tab) => {
     const labels = {
       inbox: '받은편지함',
+<<<<<<< HEAD
       sent: '보낸편지함',
+=======
+      sent: '보낸편지함', 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
       drafts: '임시보관함'
     };
     return labels[tab];
@@ -393,8 +456,13 @@ const ComposePage = () => {
           </button>
 
           {/* 탭 메뉴 */}
+<<<<<<< HEAD
           <div style={{
             display: 'flex',
+=======
+          <div style={{ 
+            display: 'flex', 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
             borderBottom: '1px solid #e0e0e0',
             marginBottom: '16px'
           }}>
@@ -449,8 +517,13 @@ const ComposePage = () => {
           </div>
 
           {/* 메일 목록 */}
+<<<<<<< HEAD
           <div style={{
             flex: 1,
+=======
+          <div style={{ 
+            flex: 1, 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
             overflowY: 'auto',
             border: '1px solid #e0e0e0',
             borderRadius: '8px'
@@ -477,13 +550,22 @@ const ComposePage = () => {
                   }
                 }}
               >
+<<<<<<< HEAD
                 <div style={{
                   display: 'flex',
+=======
+                <div style={{ 
+                  display: 'flex', 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
                   marginBottom: '4px'
                 }}>
+<<<<<<< HEAD
                   <div style={{
+=======
+                  <div style={{ 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                     fontWeight: !email.isRead && activeTab === 'inbox' ? 'bold' : 'normal',
                     fontSize: '14px',
                     color: '#333'
@@ -495,16 +577,26 @@ const ComposePage = () => {
                     {formatTime(email.time)}
                   </span>
                 </div>
+<<<<<<< HEAD
                 <div style={{
                   fontSize: '13px',
+=======
+                <div style={{ 
+                  fontSize: '13px', 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                   fontWeight: !email.isRead && activeTab === 'inbox' ? '500' : 'normal',
                   color: '#333',
                   marginBottom: '4px'
                 }}>
                   {email.subject}
                 </div>
+<<<<<<< HEAD
                 <div style={{
                   fontSize: '12px',
+=======
+                <div style={{ 
+                  fontSize: '12px', 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                   color: '#666',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -514,11 +606,19 @@ const ComposePage = () => {
                 </div>
               </div>
             ))}
+<<<<<<< HEAD
 
             {getCurrentEmails().length === 0 && (
               <div style={{
                 padding: '40px 20px',
                 textAlign: 'center',
+=======
+            
+            {getCurrentEmails().length === 0 && (
+              <div style={{ 
+                padding: '40px 20px', 
+                textAlign: 'center', 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                 color: '#666'
               }}>
                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>📭</div>
@@ -539,7 +639,11 @@ const ComposePage = () => {
                   <span style={{ fontSize: '20px' }}>📝</span>
                   <h2 className="card-title">이메일 작성</h2>
                 </div>
+<<<<<<< HEAD
 
+=======
+                
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                 {/* 템플릿 선택 */}
                 <div className="form-group">
                   <label className="form-label">템플릿 선택 (선택사항)</label>
@@ -592,12 +696,20 @@ const ComposePage = () => {
                     style={{ minHeight: '200px' }}
                   />
                 </div>
+<<<<<<< HEAD
 
+=======
+                
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                 <div className="flex justify-between items-center">
                   <span style={{ fontSize: '14px', color: '#666' }}>
                     {emailData.content.length} 글자
                   </span>
+<<<<<<< HEAD
 
+=======
+                  
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                   <div className="flex gap-4">
                     <button
                       onClick={clearAll}
@@ -637,7 +749,11 @@ const ComposePage = () => {
                   <span style={{ fontSize: '20px' }}>🤖</span>
                   <h2 className="card-title">AI 추천</h2>
                 </div>
+<<<<<<< HEAD
 
+=======
+                
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                 {suggestions.length === 0 ? (
                   <div className="text-center" style={{ padding: '60px 20px', color: '#666' }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>💡</div>
@@ -645,9 +761,15 @@ const ComposePage = () => {
                   </div>
                 ) : (
                   <div>
+<<<<<<< HEAD
                     {suggestions.map((sugg, idx) => (
                       <div
                         key={idx}
+=======
+                    {suggestions.map((suggestion, index) => (
+                      <div 
+                        key={index} 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                         style={{
                           padding: '16px',
                           borderRadius: '8px',
@@ -656,6 +778,7 @@ const ComposePage = () => {
                           backgroundColor: '#fafafa'
                         }}
                       >
+<<<<<<< HEAD
                         <h4 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px', color: '#333' }}>
                           {sugg.title}
                         </h4>
@@ -683,6 +806,38 @@ const ComposePage = () => {
                       </div>
                     ))}
 
+=======
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                              {suggestion.title}
+                            </h4>
+                            <p style={{ fontSize: '13px', color: '#666' }}>
+                              {suggestion.suggestion}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => applySuggestion(suggestion)}
+                            className="btn btn-outline"
+                            style={{ fontSize: '12px', padding: '4px 8px' }}
+                          >
+                            적용
+                          </button>
+                        </div>
+                        
+                        {suggestion.before && suggestion.after && (
+                          <div style={{ fontSize: '12px' }}>
+                            <div style={{ color: '#d32f2f', marginBottom: '2px' }}>
+                              <span style={{ fontWeight: '500' }}>수정 전:</span> {suggestion.before}
+                            </div>
+                            <div style={{ color: '#2e7d32' }}>
+                              <span style={{ fontWeight: '500' }}>수정 후:</span> {suggestion.after}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                   </div>
                 )}
               </div>
@@ -697,7 +852,11 @@ const ComposePage = () => {
                       {selectedEmail.subject}
                     </h2>
                     <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+<<<<<<< HEAD
                       <strong>보낸 사람:</strong> {selectedEmail.fromName || selectedEmail.toName}
+=======
+                      <strong>보낸 사람:</strong> {selectedEmail.fromName || selectedEmail.toName} 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                       &lt;{selectedEmail.from || selectedEmail.to}&gt;
                     </div>
                     <div style={{ fontSize: '13px', color: '#666' }}>
@@ -734,6 +893,7 @@ const ComposePage = () => {
                   </div>
                 </div>
               </div>
+<<<<<<< HEAD
 
               <div style={{
                 flex: 1,
@@ -742,6 +902,16 @@ const ComposePage = () => {
                 backgroundColor: '#fafafa'
               }}>
                 <div style={{
+=======
+              
+              <div style={{ 
+                flex: 1, 
+                padding: '24px', 
+                overflowY: 'auto',
+                backgroundColor: '#fafafa'
+              }}>
+                <div style={{ 
+>>>>>>> 99b18835e8421ac4667e6fbd791f8d7bb353b369
                   backgroundColor: 'white',
                   padding: '24px',
                   borderRadius: '8px',
