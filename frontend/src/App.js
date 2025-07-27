@@ -6,12 +6,34 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard/Dashboard';
 import HelpPage from './pages/HelpPage';
-import { UserProvider } from './contexts/UserContext';
+import { UserProvider, useUser } from './contexts/UserContext';
 import PrivateRoute from './components/PrivateRoute';
 import { SettingsProvider } from './contexts/SettingsContext'; 
 
-console.log('PrivateRoute:', PrivateRoute);
-console.log('RegisterPage:', RegisterPage);
+// 루트 경로를 위한 컴포넌트 - UserContext를 사용하여 로그인 상태 확인
+const RootRedirect = () => {
+  const { isAuthenticated, loading } = useUser();
+  
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        <div>
+          <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
+          로딩 중...
+        </div>
+      </div>
+    );
+  }
+  
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+};
 
 function App() {
   return (
@@ -35,8 +57,8 @@ function App() {
                 }
               />
 
-              {/* 기본 경로 → 대시보드 */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* 루트 경로 - 로그인 상태에 따라 리다이렉트 */}
+              <Route path="/" element={<RootRedirect />} />
             </Routes>
           </div>
         </Router>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { fetchUserSettings, saveUserSettings } from '../../api/user';
 import api from '../../api/axios';
+import { useUser } from '../../contexts/UserContext';
 
 const defaultSettings = {
   name: '',
@@ -17,31 +18,35 @@ const defaultSettings = {
   dataRetention: '30'
 };
 
-const SettingsPage = ({ userId }) => {
+const SettingsPage = () => {
+  const { user } = useUser();
+  const userId = user?.id;
+  const userName = user?.name || '';
+  const userEmail = user?.email || '';
+  const userDepartment = user?.department || '';
+
   const { settings: contextSettings, setSettings: setContextSettings } = useSettings();
-  const [settings, setSettings] = useState(defaultSettings);
+  const [settings, setSettings] = useState({ ...defaultSettings });
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!userId) return;
-    // 1. 프로필 정보 불러오기
-    api.get('/user/me').then(res => {
-      setSettings(prev => ({
-        ...prev,
-        name: res.data.name || '',
-        email: res.data.email || '',
-        department: res.data.department || ''
-      }));
-    });
+    // 1. 프로필 정보 불러오기 (context에서 우선 적용)
+    setSettings(prev => ({
+      ...prev,
+      name: userName,
+      email: userEmail,
+      department: userDepartment
+    }));
     // 2. 기존 설정 불러오기
     fetchUserSettings(userId)
       .then((data) => {
         if (data && typeof data === 'object') setSettings(prev => ({ ...prev, ...data }));
       })
       .catch(() => {});
-  }, [userId]);
+  }, [userId, userName, userEmail, userDepartment]);
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));

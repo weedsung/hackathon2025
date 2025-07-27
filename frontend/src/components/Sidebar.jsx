@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useUser();
 
   const menuItems = [
     {
@@ -47,8 +49,7 @@ const Sidebar = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
+    logout();
     navigate('/login');
   };
 
