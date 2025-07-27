@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useSettings } from "../../contexts/SettingsContext";
+
 
 const ComposePage = () => {
+  const { settings } = useSettings();
   const [emailData, setEmailData] = useState({
     to: '',
     subject: '',
@@ -234,56 +237,90 @@ const ComposePage = () => {
     }
 
     setIsGenerating(true);
-    
-    setTimeout(() => {
-      setSuggestions([
-        {
-          type: 'tone',
-          title: '톤 개선',
-          suggestion: '더 정중한 표현으로 수정하면 좋겠습니다.',
-          before: '확인해주세요',
-          after: '확인 부탁드립니다'
-        },
-        {
-          type: 'structure',
-          title: '구조 개선',
-          suggestion: '인사말을 추가하면 더 자연스러워집니다.',
-          before: '바로 본론으로 시작',
-          after: '"안녕하세요"로 시작하기'
-        },
-        {
-          type: 'clarity',
-          title: '명확성 향상',
-          suggestion: '구체적인 일정을 제시하면 좋겠습니다.',
-          before: '빨리',
-          after: '이번 주 금요일까지'
-        }
-      ]);
+    try {
+      // 1) 전체 개선본 받아오기
+      const res = await fetch("http://localhost:5000/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emailText: emailData.content,
+          tone: settings.defaultTone,
+          analysisLevel: settings.analysisLevel,
+          autoCorrection: true
+        })
+      });
+      const data = await res.json();
+
+      // 2) 원문/개선본 문장별 분할
+      const origSents = emailData.content.split(/(?<=[.?!])\s+/);
+      const improvedSents = data.improvedVersion.split(/(?<=[.?!])\s+/);
+
+      // 3) before/after 쌍 생성
+      const stepSuggestions = origSents.map((before, i) => ({
+        type: 'auto',
+        title: '문장별 개선 제안',
+        suggestion: data.suggestions[i]?.suggestion || '',
+        before,
+        after: improvedSents[i] || before
+      }));
+
+      // 4) state 업데이트
+      setSuggestions(stepSuggestions);
+
+    } catch (err) {
+      console.error("단계별 검토 실패:", err);
+      alert("검토 요청에 실패했습니다.");
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
+
+
+
 
   const applySuggestion = (suggestion) => {
-    if (suggestion.before && suggestion.after) {
-      const updatedContent = emailData.content.replace(
-        suggestion.before,
-        suggestion.after
-      );
-      setEmailData(prev => ({
-        ...prev,
-        content: updatedContent
-      }));
-    }
+    setEmailData(prev => ({
+      ...prev,
+      content: prev.content.replace(suggestion.before, suggestion.after)
+    }));
+    // 한 번 적용된 제안은 목록에서 제거
+    setSuggestions(prev => prev.filter(s => s !== suggestion));
   };
 
-  const sendToReview = () => {
-    if (!emailData.content.trim()) {
-      alert('메일 내용을 입력해주세요.');
-      return;
-    }
-    
-    alert('검토 페이지로 이동하는 기능은 추후 구현됩니다.');
-  };
+
+  // === sendToReview 함수 전체 ===
+  const sendToReview = async () => {
+  if (!emailData.content.trim()) {
+    alert('메일 내용을 입력해주세요.');
+    return;
+  }
+
+  setIsGenerating(true);
+  try {
+    const res = await fetch("http://localhost:5000/api/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        emailText: emailData.content,
+        tone: settings.defaultTone,
+        analysisLevel: settings.analysisLevel,
+        autoCorrection: true
+      })
+    });
+
+    const data = await res.json();
+    // 1) 전체 본문을 개선된 버전으로 교체
+    setEmailData(prev => ({ ...prev, content: data.improvedVersion }));
+    // 2) 사이드바에는 충고만 보여주기
+    setSuggestions(data.suggestions);
+
+  } catch (err) {
+    console.error("검토 실패:", err);
+    alert("검토 요청에 실패했습니다.");
+  }
+  setIsGenerating(false);
+};
+
 
   const clearAll = () => {
     setEmailData({
@@ -324,7 +361,7 @@ const ComposePage = () => {
   const getTabLabel = (tab) => {
     const labels = {
       inbox: '받은편지함',
-      sent: '보낸편지함', 
+      sent: '보낸편지함',
       drafts: '임시보관함'
     };
     return labels[tab];
@@ -356,8 +393,8 @@ const ComposePage = () => {
           </button>
 
           {/* 탭 메뉴 */}
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             borderBottom: '1px solid #e0e0e0',
             marginBottom: '16px'
           }}>
@@ -412,8 +449,8 @@ const ComposePage = () => {
           </div>
 
           {/* 메일 목록 */}
-          <div style={{ 
-            flex: 1, 
+          <div style={{
+            flex: 1,
             overflowY: 'auto',
             border: '1px solid #e0e0e0',
             borderRadius: '8px'
@@ -440,13 +477,13 @@ const ComposePage = () => {
                   }
                 }}
               >
-                <div style={{ 
-                  display: 'flex', 
+                <div style={{
+                  display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
                   marginBottom: '4px'
                 }}>
-                  <div style={{ 
+                  <div style={{
                     fontWeight: !email.isRead && activeTab === 'inbox' ? 'bold' : 'normal',
                     fontSize: '14px',
                     color: '#333'
@@ -458,16 +495,16 @@ const ComposePage = () => {
                     {formatTime(email.time)}
                   </span>
                 </div>
-                <div style={{ 
-                  fontSize: '13px', 
+                <div style={{
+                  fontSize: '13px',
                   fontWeight: !email.isRead && activeTab === 'inbox' ? '500' : 'normal',
                   color: '#333',
                   marginBottom: '4px'
                 }}>
                   {email.subject}
                 </div>
-                <div style={{ 
-                  fontSize: '12px', 
+                <div style={{
+                  fontSize: '12px',
                   color: '#666',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -477,11 +514,11 @@ const ComposePage = () => {
                 </div>
               </div>
             ))}
-            
+
             {getCurrentEmails().length === 0 && (
-              <div style={{ 
-                padding: '40px 20px', 
-                textAlign: 'center', 
+              <div style={{
+                padding: '40px 20px',
+                textAlign: 'center',
                 color: '#666'
               }}>
                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>📭</div>
@@ -502,7 +539,7 @@ const ComposePage = () => {
                   <span style={{ fontSize: '20px' }}>📝</span>
                   <h2 className="card-title">이메일 작성</h2>
                 </div>
-                
+
                 {/* 템플릿 선택 */}
                 <div className="form-group">
                   <label className="form-label">템플릿 선택 (선택사항)</label>
@@ -555,12 +592,12 @@ const ComposePage = () => {
                     style={{ minHeight: '200px' }}
                   />
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span style={{ fontSize: '14px', color: '#666' }}>
                     {emailData.content.length} 글자
                   </span>
-                  
+
                   <div className="flex gap-4">
                     <button
                       onClick={clearAll}
@@ -600,7 +637,7 @@ const ComposePage = () => {
                   <span style={{ fontSize: '20px' }}>🤖</span>
                   <h2 className="card-title">AI 추천</h2>
                 </div>
-                
+
                 {suggestions.length === 0 ? (
                   <div className="text-center" style={{ padding: '60px 20px', color: '#666' }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>💡</div>
@@ -608,9 +645,9 @@ const ComposePage = () => {
                   </div>
                 ) : (
                   <div>
-                    {suggestions.map((suggestion, index) => (
-                      <div 
-                        key={index} 
+                    {suggestions.map((sugg, idx) => (
+                      <div
+                        key={idx}
                         style={{
                           padding: '16px',
                           borderRadius: '8px',
@@ -619,36 +656,33 @@ const ComposePage = () => {
                           backgroundColor: '#fafafa'
                         }}
                       >
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h4 style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
-                              {suggestion.title}
-                            </h4>
-                            <p style={{ fontSize: '13px', color: '#666' }}>
-                              {suggestion.suggestion}
+                        <h4 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px', color: '#333' }}>
+                          {sugg.title}
+                        </h4>
+                        <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+                          {sugg.suggestion || sugg.text}
+                        </p>
+
+                        {sugg.before && sugg.after && (
+                          <>
+                            <p style={{ fontSize: '12px', color: '#d32f2f', marginBottom: '4px' }}>
+                              <strong>수정 전:</strong> {sugg.before}
                             </p>
-                          </div>
-                          <button
-                            onClick={() => applySuggestion(suggestion)}
-                            className="btn btn-outline"
-                            style={{ fontSize: '12px', padding: '4px 8px' }}
-                          >
-                            적용
-                          </button>
-                        </div>
-                        
-                        {suggestion.before && suggestion.after && (
-                          <div style={{ fontSize: '12px' }}>
-                            <div style={{ color: '#d32f2f', marginBottom: '2px' }}>
-                              <span style={{ fontWeight: '500' }}>수정 전:</span> {suggestion.before}
-                            </div>
-                            <div style={{ color: '#2e7d32' }}>
-                              <span style={{ fontWeight: '500' }}>수정 후:</span> {suggestion.after}
-                            </div>
-                          </div>
+                            <p style={{ fontSize: '12px', color: '#2e7d32', marginBottom: '12px' }}>
+                              <strong>수정 후:</strong> {sugg.after}
+                            </p>
+                            <button
+                              onClick={() => applySuggestion(sugg)}
+                              className="btn btn-outline"
+                              style={{ fontSize: '12px', padding: '4px 8px' }}
+                            >
+                              적용
+                            </button>
+                          </>
                         )}
                       </div>
                     ))}
+
                   </div>
                 )}
               </div>
@@ -663,7 +697,7 @@ const ComposePage = () => {
                       {selectedEmail.subject}
                     </h2>
                     <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
-                      <strong>보낸 사람:</strong> {selectedEmail.fromName || selectedEmail.toName} 
+                      <strong>보낸 사람:</strong> {selectedEmail.fromName || selectedEmail.toName}
                       &lt;{selectedEmail.from || selectedEmail.to}&gt;
                     </div>
                     <div style={{ fontSize: '13px', color: '#666' }}>
@@ -700,14 +734,14 @@ const ComposePage = () => {
                   </div>
                 </div>
               </div>
-              
-              <div style={{ 
-                flex: 1, 
-                padding: '24px', 
+
+              <div style={{
+                flex: 1,
+                padding: '24px',
                 overflowY: 'auto',
                 backgroundColor: '#fafafa'
               }}>
-                <div style={{ 
+                <div style={{
                   backgroundColor: 'white',
                   padding: '24px',
                   borderRadius: '8px',
