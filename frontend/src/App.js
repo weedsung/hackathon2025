@@ -6,7 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard/Dashboard';
 import HelpPage from './pages/HelpPage';
-import { UserProvider } from './contexts/UserContext';
+import { UserProvider, useUser } from './contexts/UserContext';
 import PrivateRoute from './components/PrivateRoute';
 import { SettingsProvider } from './contexts/SettingsContext'; 
 

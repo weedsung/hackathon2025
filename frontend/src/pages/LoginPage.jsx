@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
+import { useUser } from '../contexts/UserContext';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -9,30 +10,39 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login: loginUser } = useUser();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
     try {
       const data = await login(email, password);
-      // 로그인 성공 처리
-      localStorage.setItem('token', data.token); // 토큰 저장
-      localStorage.setItem('userId', data.userId); // userId 저장
+      
+      // UserContext 업데이트
+      loginUser(data);
+      
       setIsLoading(false);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || '로그인 실패');
+      setError(err.response?.data?.message || '로그인에 실패했습니다.');
       setIsLoading(false);
     }
   };
 
   // 계정없이 이용하기 (테스트용)
   const handleGuestLogin = () => {
-    // 임시 토큰과 사용자 ID 설정
-    localStorage.setItem('token', 'guest-token-123');
-    localStorage.setItem('userId', 'guest-user');
-    localStorage.setItem('userName', '게스트 사용자');
+    const guestData = {
+      token: 'guest-token-123',
+      userId: 'guest-user',
+      name: '게스트 사용자',
+      email: 'guest@example.com',
+      department: '게스트'
+    };
+    
+    // UserContext 업데이트
+    loginUser(guestData);
     navigate('/dashboard');
   };
 
@@ -123,11 +133,11 @@ const LoginPage = () => {
         <div className="text-center mt-4">
           <p style={{ fontSize: '14px', color: '#666' }}>
             계정이 없으신가요?{' '}
-            <button 
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: '#1976d2', 
+            <button
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#1976d2',
                 fontWeight: '500',
                 cursor: 'pointer',
                 textDecoration: 'underline'
@@ -162,4 +172,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage; 
+export default LoginPage;

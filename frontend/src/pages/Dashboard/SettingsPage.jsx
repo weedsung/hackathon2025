@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useUser } from '../../contexts/UserContext';
 import { fetchUserSettings, saveUserSettings } from '../../api/user';
-import api from '../../api/axios';
 
 const defaultSettings = {
   name: '',
@@ -17,31 +17,42 @@ const defaultSettings = {
   dataRetention: '30'
 };
 
-const SettingsPage = ({ userId }) => {
+const SettingsPage = () => {
   const { settings: contextSettings, setSettings: setContextSettings } = useSettings();
+  const { user } = useUser();
   const [settings, setSettings] = useState(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!userId) return;
-    // 1. 프로필 정보 불러오기
-    api.get('/user/me').then(res => {
+    // 로그인한 사용자 정보로 프로필 자동 채우기
+    if (user) {
       setSettings(prev => ({
         ...prev,
-        name: res.data.name || '',
-        email: res.data.email || '',
-        department: res.data.department || ''
+        name: user.name || '',
+        email: user.email || '',
+        department: user.department || ''
       }));
-    });
-    // 2. 기존 설정 불러오기
-    fetchUserSettings(userId)
-      .then((data) => {
-        if (data && typeof data === 'object') setSettings(prev => ({ ...prev, ...data }));
-      })
-      .catch(() => {});
-  }, [userId]);
+    }
+
+    // 로그인한 사용자가 있고 게스트가 아니면 기존 설정 불러오기
+    if (user && user.userId && user.userId !== 'guest-user') {
+      setLoading(true);
+      fetchUserSettings()
+        .then((data) => {
+          if (data && typeof data === 'object') {
+            setSettings(prev => ({ ...prev, ...data }));
+          }
+        })
+        .catch((error) => {
+          console.log('기존 설정을 불러올 수 없습니다. 기본값을 사용합니다:', error);
+          // 설정 불러오기 실패 시 기본값 사용
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [user]);
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -50,18 +61,18 @@ const SettingsPage = ({ userId }) => {
   };
 
   const handleSave = async () => {
-    if (!userId) {
-      setError('로그인 정보가 없습니다. 다시 로그인 해주세요.');
+    if (!user || user.userId === 'guest-user') {
+      setError('게스트 사용자는 설정을 저장할 수 없습니다. 로그인 후 이용해주세요.');
       return;
     }
     setIsSaving(true);
     setError('');
     try {
-      await saveUserSettings(userId, settings);
+      await saveUserSettings(settings);
       setSaveMessage('설정이 저장되었습니다.');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (err) {
-      setError('설정 저장 실패');
+      setError('설정 저장에 실패했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -138,6 +149,19 @@ const SettingsPage = ({ userId }) => {
           <div className="card-header">
             <span style={{ fontSize: '20px' }}>👤</span>
             <h2 className="card-title">프로필 설정</h2>
+            {user && (
+              <div style={{ 
+                fontSize: '14px', 
+                color: '#666', 
+                marginTop: '4px',
+                padding: '8px 12px',
+                backgroundColor: '#e3f2fd',
+                borderRadius: '4px',
+                border: '1px solid #bbdefb'
+              }}>
+                ✅ 로그인된 사용자: {user.name} ({user.email})
+              </div>
+            )}
           </div>
           
           <div className="grid grid-2 gap-4">
@@ -148,6 +172,7 @@ const SettingsPage = ({ userId }) => {
                 value={settings.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 className="form-input"
+                placeholder="이름을 입력하세요"
               />
             </div>
             
@@ -158,6 +183,7 @@ const SettingsPage = ({ userId }) => {
                 value={settings.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 className="form-input"
+                placeholder="이메일을 입력하세요"
               />
             </div>
             
@@ -168,6 +194,7 @@ const SettingsPage = ({ userId }) => {
                 value={settings.department}
                 onChange={(e) => handleInputChange('department', e.target.value)}
                 className="form-input"
+                placeholder="부서를 입력하세요"
               />
             </div>
           </div>
@@ -330,13 +357,18 @@ const SettingsPage = ({ userId }) => {
           <div style={{ marginLeft: 'auto' }}>
             <button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || loading}
               className="btn btn-success"
             >
               {isSaving ? (
                 <>
                   <div className="loading-spinner"></div>
                   저장 중...
+                </>
+              ) : loading ? (
+                <>
+                  <div className="loading-spinner"></div>
+                  로딩 중...
                 </>
               ) : (
                 <>
@@ -351,4 +383,4 @@ const SettingsPage = ({ userId }) => {
   );
 };
 
-export default SettingsPage; 
+export default SettingsPage;

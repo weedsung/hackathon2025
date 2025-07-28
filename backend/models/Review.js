@@ -7,8 +7,18 @@ const reviewSchema = new mongoose.Schema({
     overallScore: Number,
     emotionScore: String,
     misunderstandingRisk: String,
-    suggestions: [{ type: Object }],
-    improvedVersion: String
+    suggestions: [{
+      suggestion: String,
+      type: String,
+      priority: String
+    }],
+    improvedVersion: String,
+    sentenceAnalysis: [{
+      original: String,
+      improved: String,
+      suggestion: String,
+      type: String
+    }]
   },
   createdAt: { type: Date, default: Date.now }
 });

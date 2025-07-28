@@ -1,26 +1,36 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import ComposePage from './ComposePage';
+import HistoryPage from './HistoryPage';
 import ReviewPage from './ReviewPage';
 import ManualPage from './ManualPage';
-import HistoryPage from './HistoryPage';
 import SettingsPage from './SettingsPage';
+import { useUser } from '../../contexts/UserContext';
 
 const Dashboard = () => {
+  const { user } = useUser();
+
   return (
-    <div className="dashboard-container">
+    <div style={{ display: 'flex', height: '100vh' }}>
+      {/* 사이드바 */}
       <Sidebar />
-      <main className="main-content">
+      
+      {/* 메인 콘텐츠 영역 */}
+      <div style={{
+        flex: 1,
+        overflow: 'auto',
+        backgroundColor: '#f5f5f5'
+      }}>
         <Routes>
+          <Route path="/" element={<ComposePage />} />
           <Route path="/compose" element={<ComposePage />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/manual" element={<ManualPage />} />
-          <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/" element={<Navigate to="/dashboard/compose" replace />} />
         </Routes>
-      </main>
+      </div>
     </div>
   );
 };
