@@ -28,7 +28,7 @@ const Dashboard = () => {
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/manual" element={<ManualPage />} />
-          <Route path="/settings" element={<SettingsPage userId={user?.userId} />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </div>
     </div>

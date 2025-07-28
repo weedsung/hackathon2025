@@ -43,74 +43,134 @@ app.get("/", (req, res) => {
 // GPT 리뷰 라우터
 app.post("/api/review", async (req, res) => {
   const { emailText, tone, analysisLevel, autoCorrection } = req.body;
-  //console.log("백엔드 수신값:", { tone, analysisLevel, autoCorrection });
+  
+  if (!emailText || !emailText.trim()) {
+    return res.status(400).json({ error: "이메일 내용이 필요합니다." });
+  }
 
-  const correctionInstruction = autoCorrection
-    ? '4. 해당 표현을 보다 정중하고 적절한 문장으로 고쳐 improvedVersion 필드에 제시해줘.'
-    : '4. 수정 제안은 하지 마. improvedVersion 필드는 null 또는 빈 문자열로 둬.';
+  const systemPrompt = `You are an expert email writing assistant specializing in Korean business communication. Your task is to analyze and improve email content.
 
-  const prompt = `
-You are a Korean business communication expert. You MUST respond in perfect Korean only. No English words or sentences are allowed in your output.
+ANALYSIS REQUIREMENTS:
+- Tone: ${tone || 'professional'}
+- Analysis Level: ${analysisLevel || 'detailed'}
+- Auto Correction: ${autoCorrection ? 'enabled' : 'disabled'}
 
-
-Your task is to analyze and improve the tone, clarity, and appropriateness of the following email, written in Korean, according to the user's preferences.
-
-Please respond in the following strict JSON format:
+RESPONSE FORMAT (JSON only):
 {
-  "improvedVersion": "The entire email rewritten in more polite, natural, and clear Korean",
+  "improvedVersion": "Complete improved email in Korean",
   "suggestions": [
     {
-      "type": "warning or info",
-      "text": "Explanation of the issue in the original sentence",
-      "suggestion": "Suggested alternative sentence"
+      "suggestion": "Korean improvement suggestion",
+      "type": "clarity|tone|grammar|structure|politeness"
     }
-  ],
-  "toneFeedback": "Overall evaluation of the tone and communication effectiveness",
-  "overallScore": 1~100 (based on clarity, professionalism, and tone)
+  ]
 }
 
-Guidelines:
-- Keep the original meaning of each sentence, but rewrite them in a more polite, natural, and fluent Korean business style.
-- Avoid repeating exactly the same sentence in the improved version unless it is already perfect — always aim to improve.
-- Do not include explanations or any additional text outside the JSON block.
-- Suggestions should align with modern, professional Korean email etiquette.
+ANALYSIS CRITERIA:
+1. Clarity and conciseness
+2. Professional tone appropriate for Korean business culture
+3. Grammar and spelling accuracy
+4. Logical structure and flow
+5. Politeness levels (존댓말/반말)
+6. Cultural appropriateness
+7. Clear call-to-action
 
-User settings:
-- Tone: '${tone}'
-- Analysis Level: '${analysisLevel}' (${analysisLevel === 'basic' ? 'Simple analysis focusing on misunderstandings' : analysisLevel === 'detailed' ? 'Detailed analysis including emotional tone and clarity' : 'In-depth analysis including context and intent'})
-- Auto Correction: ${autoCorrection ? 'Enabled' : 'Disabled'}
+IMPORTANT: 
+- Respond ONLY in JSON format. All text content must be in Korean.
+- Always provide improvedVersion regardless of autoCorrection setting.
+- When autoCorrection is disabled, still provide suggestions but keep improvedVersion as the original text if no improvements are needed.`;
 
-Original Email:
-"""
+  const userPrompt = `Analyze and improve this Korean email:
+
 ${emailText}
-"""
 
-⚠️ Respond ONLY in Korean.
-- Do not use English words or phrases (e.g. “is more polite”, “instead of”, “clearer tone”).
-- All fields in the JSON response (text, suggestion, toneFeedback, etc) MUST be written entirely in Korean.
-`;
-
+Provide comprehensive analysis and improvements following the specified JSON format.`;
 
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 2000
     });
 
     const raw = response.choices[0].message.content;
 
     let parsed;
     try {
-      parsed = JSON.parse(raw);
+      // 더 강력한 JSON 파싱 함수
+      function extractAndParseJSON(text) {
+        // 1. JSON 블록 추출 시도
+        const jsonBlockPatterns = [
+          /```json\s*([\s\S]*?)\s*```/,
+          /```\s*([\s\S]*?)\s*```/,
+          /\{[\s\S]*\}/  // 중괄호로 둘러싸인 JSON 찾기
+        ];
+        
+        for (const pattern of jsonBlockPatterns) {
+          const match = text.match(pattern);
+          if (match) {
+            try {
+              const jsonStr = match[1] || match[0];
+              return JSON.parse(jsonStr);
+            } catch (e) {
+              console.log('패턴 매칭 실패, 다음 패턴 시도:', e.message);
+              continue;
+            }
+          }
+        }
+        
+        // 2. 직접 JSON 파싱 시도
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error('모든 JSON 파싱 시도 실패');
+        }
+      }
+      
+      parsed = extractAndParseJSON(raw);
+      
+      // 필수 필드 검증 및 기본값 설정
+      const result = {
+        suggestions: parsed.suggestions || [],
+        improvedVersion: parsed.improvedVersion || emailText
+      };
+      
+      res.json(result);
+      
     } catch (err) {
       console.error("⚠️ JSON 파싱 실패:", raw);
-      return res.status(500).json({ error: "GPT 응답 JSON 파싱 실패", raw });
+      console.error("파싱 에러:", err.message);
+      
+      // 더 안전한 fallback 응답
+      const fallbackResult = {
+        suggestions: [
+          {
+            suggestion: 'AI 분석 중 오류가 발생했습니다. 다시 시도해주세요.',
+            type: 'error'
+          }
+        ],
+        improvedVersion: emailText
+      };
+      
+      res.json(fallbackResult);
     }
 
-    res.json(parsed);
   } catch (error) {
     console.error("❌ GPT 호출 실패:", error);
-    res.status(500).json({ error: "GPT API 호출 실패" });
+    res.status(500).json({ 
+      error: "GPT API 호출 실패",
+      suggestions: [
+        {
+          suggestion: 'AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          type: 'error'
+        }
+      ],
+      improvedVersion: emailText
+    });
   }
 });
 

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useUser } from '../../contexts/UserContext';
 import { fetchUserSettings, saveUserSettings } from '../../api/user';
-import api from '../../api/axios';
 
 const defaultSettings = {
   name: '',
@@ -18,13 +17,14 @@ const defaultSettings = {
   dataRetention: '30'
 };
 
-const SettingsPage = ({ userId }) => {
+const SettingsPage = () => {
   const { settings: contextSettings, setSettings: setContextSettings } = useSettings();
   const { user } = useUser();
   const [settings, setSettings] = useState(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // 로그인한 사용자 정보로 프로필 자동 채우기
@@ -37,20 +37,22 @@ const SettingsPage = ({ userId }) => {
       }));
     }
 
-    // userId가 있으면 기존 설정 불러오기
-    if (userId && userId !== 'guest-user') {
-      fetchUserSettings(userId)
+    // 로그인한 사용자가 있고 게스트가 아니면 기존 설정 불러오기
+    if (user && user.userId && user.userId !== 'guest-user') {
+      setLoading(true);
+      fetchUserSettings()
         .then((data) => {
           if (data && typeof data === 'object') {
             setSettings(prev => ({ ...prev, ...data }));
           }
         })
-        .catch(() => {
+        .catch((error) => {
+          console.log('기존 설정을 불러올 수 없습니다. 기본값을 사용합니다:', error);
           // 설정 불러오기 실패 시 기본값 사용
-          console.log('기존 설정을 불러올 수 없습니다. 기본값을 사용합니다.');
-        });
+        })
+        .finally(() => setLoading(false));
     }
-  }, [user, userId]);
+  }, [user]);
 
   const handleInputChange = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -59,14 +61,14 @@ const SettingsPage = ({ userId }) => {
   };
 
   const handleSave = async () => {
-    if (!userId || userId === 'guest-user') {
+    if (!user || user.userId === 'guest-user') {
       setError('게스트 사용자는 설정을 저장할 수 없습니다. 로그인 후 이용해주세요.');
       return;
     }
     setIsSaving(true);
     setError('');
     try {
-      await saveUserSettings(userId, settings);
+      await saveUserSettings(settings);
       setSaveMessage('설정이 저장되었습니다.');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (err) {
@@ -355,13 +357,18 @@ const SettingsPage = ({ userId }) => {
           <div style={{ marginLeft: 'auto' }}>
             <button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || loading}
               className="btn btn-success"
             >
               {isSaving ? (
                 <>
                   <div className="loading-spinner"></div>
                   저장 중...
+                </>
+              ) : loading ? (
+                <>
+                  <div className="loading-spinner"></div>
+                  로딩 중...
                 </>
               ) : (
                 <>

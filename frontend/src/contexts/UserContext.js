@@ -62,12 +62,35 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem('token', userData.token);
-    localStorage.setItem('userId', userData.userId);
-    localStorage.setItem('userName', userData.name);
-    localStorage.setItem('userEmail', userData.email);
-    localStorage.setItem('userDepartment', userData.department);
+    // 게스트 토큰인 경우 - JWT 검증 건너뛰기
+    if (userData.token === 'guest-token-123') {
+      setUser(userData);
+      localStorage.setItem('token', userData.token);
+      localStorage.setItem('userId', userData.userId);
+      localStorage.setItem('userName', userData.name);
+      localStorage.setItem('userEmail', userData.email);
+      localStorage.setItem('userDepartment', userData.department);
+      return;
+    }
+    
+    // 실제 JWT 토큰인 경우만 검증
+    if (userData.token && typeof userData.token === 'string') {
+      // JWT 토큰 형식 검증 (3개의 부분으로 구성)
+      if (userData.token.includes('.') && userData.token.split('.').length === 3) {
+        setUser(userData);
+        localStorage.setItem('token', userData.token);
+        localStorage.setItem('userId', userData.userId);
+        localStorage.setItem('userName', userData.name);
+        localStorage.setItem('userEmail', userData.email);
+        localStorage.setItem('userDepartment', userData.department);
+      } else {
+        console.error('유효하지 않은 JWT 토큰 형식:', userData.token);
+        throw new Error('유효하지 않은 JWT 토큰 형식입니다.');
+      }
+    } else {
+      console.error('토큰이 없거나 잘못된 형식입니다.');
+      throw new Error('토큰이 필요합니다.');
+    }
   };
 
   const handleLogout = async () => {

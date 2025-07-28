@@ -44,8 +44,9 @@ const HelpPage = () => {
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) setFaqs(data);
       })
-      .catch(() => {
-        // 에러 발생 시 아무것도 하지 않음(기존 데이터 유지)
+      .catch((error) => {
+        console.log('도움말 로드 실패, 기본 데이터 사용:', error);
+        // 에러 발생 시 기본 데이터 유지
       })
       .finally(() => setLoading(false));
   }, []);
@@ -196,44 +197,55 @@ const HelpPage = () => {
               </div>
 
               {/* FAQ 목록 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {filteredFaqs.map(faq => (
-                  <div key={faq.id} style={{ border: '1px solid #e0e0e0', borderRadius: '8px', overflow: 'hidden' }}>
-                    <button
-                      onClick={() => toggleFaq(faq.id)}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '16px',
-                        border: 'none',
-                        background: 'white',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                    >
-                      <span style={{ fontWeight: '500', color: '#333' }}>{faq.question}</span>
-                      <span style={{ fontSize: '20px', color: '#666' }}>
-                        {expandedFaq === faq.id ? '🔼' : '🔽'}
-                      </span>
-                    </button>
-                    {expandedFaq === faq.id && (
-                      <div style={{ padding: '0 16px 16px 16px', backgroundColor: '#f8f9fa' }}>
-                        <p style={{ color: '#555', lineHeight: '1.6' }}>{faq.answer}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {filteredFaqs.length === 0 && (
-                <div className="text-center" style={{ padding: '32px' }}>
-                  <p style={{ color: '#666' }}>검색 결과가 없습니다.</p>
+              {loading && (
+                <div className="text-center" style={{ padding: '40px 20px' }}>
+                  <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
+                  <p style={{ color: '#666' }}>도움말을 불러오는 중...</p>
                 </div>
+              )}
+              
+                            {!loading && (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {filteredFaqs.map(faq => (
+                      <div key={faq.id} style={{ border: '1px solid #e0e0e0', borderRadius: '8px', overflow: 'hidden' }}>
+                        <button
+                          onClick={() => toggleFaq(faq.id)}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '16px',
+                            border: 'none',
+                            background: 'white',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                        >
+                          <span style={{ fontWeight: '500', color: '#333' }}>{faq.question}</span>
+                          <span style={{ fontSize: '20px', color: '#666' }}>
+                            {expandedFaq === faq.id ? '🔼' : '🔽'}
+                          </span>
+                        </button>
+                        {expandedFaq === faq.id && (
+                          <div style={{ padding: '0 16px 16px 16px', backgroundColor: '#f8f9fa' }}>
+                            <p style={{ color: '#555', lineHeight: '1.6' }}>{faq.answer}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {filteredFaqs.length === 0 && (
+                    <div className="text-center" style={{ padding: '32px' }}>
+                      <p style={{ color: '#666' }}>검색 결과가 없습니다.</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

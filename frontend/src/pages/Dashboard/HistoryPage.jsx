@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchHistory } from '../../api/history';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 
 const defaultHistoryData = [
   {
@@ -60,25 +61,30 @@ const defaultHistoryData = [
   }
 ];
 
-function HistoryPage({ userId }) {
+function HistoryPage() {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState('');
   const [historyData, setHistoryData] = useState(defaultHistoryData);
-  // const userId = 1; // 예시: 실제 서비스에서는 로그인 정보에서 받아야 함
-  // const userId = localStorage.getItem('userId'); // 실제 로그인한 사용자 ID 사용
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!userId) return; // userId 없으면 호출하지 않음
-    fetchHistory(userId)
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setHistoryData(data);
-      })
-      .catch(() => {
-        // 에러 발생 시 아무것도 하지 않음(기존 데이터 유지)
-      });
-  }, [userId]);
+    // 로그인한 사용자가 있으면 API 호출
+    if (user && user.userId && user.userId !== 'guest-user') {
+      setLoading(true);
+      fetchHistory()
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) setHistoryData(data);
+        })
+        .catch((error) => {
+          console.log('히스토리 로드 실패, 기본 데이터 사용:', error);
+          // 에러 발생 시 기본 데이터 유지
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [user]);
 
   // 필터별 개수 동적 계산
   const filterCounts = {
@@ -207,104 +213,113 @@ function HistoryPage({ userId }) {
       </div>
 
       {/* 히스토리 목록 */}
-      <div>
-        {filteredHistory.map(item => (
-          <div key={item.id} className="card" style={{ marginBottom: '16px' }}>
-            <div className="flex justify-between items-start">
-              <div style={{ flex: 1 }}>
-                <div className="flex items-center gap-4 mb-4">
-                  <span style={{ fontSize: '24px' }}>{getTypeIcon(item.type)}</span>
-                  <h3 style={{ fontSize: '18px', fontWeight: '600' }}>{item.title}</h3>
-                  <span 
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      ...getStatusStyle(item.status)
-                    }}
-                  >
-                    {item.status === 'sent' ? '발송됨' : '임시저장'}
-                  </span>
-                  {item.type === 'review' && item.score && (
-                    <span style={{
-                      padding: '4px 12px',
-                      backgroundColor: '#e3f2fd',
-                      color: '#1976d2',
-                      fontSize: '12px',
-                      borderRadius: '16px',
-                      fontWeight: '500'
-                    }}>
-                      점수: {item.score}/100
-                    </span>
-                  )}
-                </div>
-
-                <p style={{ color: '#666', marginBottom: '12px', lineHeight: '1.5' }}>
-                  {item.content}
-                </p>
-
-                <div className="flex items-center gap-4" style={{ fontSize: '14px', color: '#888' }}>
-                  <div className="flex items-center gap-4">
-                    <span>📧 수신자: {item.recipient}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span>🕒 {formatDate(item.date)} {item.time}</span>
-                  </div>
-                  {item.template && (
-                    <div style={{ color: '#1976d2' }}>
-                      📝 템플릿: {item.template}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <button style={{
-                padding: '8px',
-                border: 'none',
-                background: 'none',
-                color: '#999',
-                cursor: 'pointer',
-                borderRadius: '4px',
-                fontSize: '20px'
-              }}>
-                ⋮
-              </button>
-            </div>
-
-            <div style={{ 
-              marginTop: '16px', 
-              paddingTop: '16px', 
-              borderTop: '1px solid #e0e0e0'
-            }}>
-              <div className="flex gap-4">
-                <button className="btn btn-primary" onClick={() => navigate('/dashboard/compose', { state: { mail: item } })}>
-                  🔄 다시 사용
-                </button>
-                <button className="btn btn-secondary">
-                  👀 상세 보기
-                </button>
-                {item.type === 'review' && (
-                  <button className="btn btn-secondary">
-                    🔍 다시 검토
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredHistory.length === 0 && (
-        <div className="text-center" style={{ padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📂</div>
-          <h3 style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px' }}>
-            검색 결과가 없습니다
-          </h3>
-          <p style={{ color: '#666' }}>
-            다른 검색어나 필터를 사용해보세요.
-          </p>
+      {loading && (
+        <div className="text-center" style={{ padding: '40px 20px' }}>
+          <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
+          <p style={{ color: '#666' }}>히스토리를 불러오는 중...</p>
         </div>
+      )}
+      
+      {!loading && (
+        <>
+          {filteredHistory.map(item => (
+            <div key={item.id} className="card" style={{ marginBottom: '16px' }}>
+              <div className="flex justify-between items-start">
+                <div style={{ flex: 1 }}>
+                  <div className="flex items-center gap-4 mb-4">
+                    <span style={{ fontSize: '24px' }}>{getTypeIcon(item.type)}</span>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600' }}>{item.title}</h3>
+                    <span 
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: '16px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        ...getStatusStyle(item.status)
+                      }}
+                    >
+                      {item.status === 'sent' ? '발송됨' : '임시저장'}
+                    </span>
+                    {item.type === 'review' && item.score && (
+                      <span style={{
+                        padding: '4px 12px',
+                        backgroundColor: '#e3f2fd',
+                        color: '#1976d2',
+                        fontSize: '12px',
+                        borderRadius: '16px',
+                        fontWeight: '500'
+                      }}>
+                        점수: {item.score}/100
+                      </span>
+                    )}
+                  </div>
+
+                  <p style={{ color: '#666', marginBottom: '12px', lineHeight: '1.5' }}>
+                    {item.content}
+                  </p>
+
+                  <div className="flex items-center gap-4" style={{ fontSize: '14px', color: '#888' }}>
+                    <div className="flex items-center gap-4">
+                      <span>📧 수신자: {item.recipient}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span>🕒 {formatDate(item.date)} {item.time}</span>
+                    </div>
+                    {item.template && (
+                      <div style={{ color: '#1976d2' }}>
+                        📝 템플릿: {item.template}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button style={{
+                  padding: '8px',
+                  border: 'none',
+                  background: 'none',
+                  color: '#999',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                  fontSize: '20px'
+                }}>
+                  ⋮
+                </button>
+              </div>
+
+              <div style={{ 
+                marginTop: '16px', 
+                paddingTop: '16px', 
+                borderTop: '1px solid #e0e0e0'
+              }}>
+                <div className="flex gap-4">
+                  <button className="btn btn-primary" onClick={() => navigate('/dashboard/compose', { state: { mail: item } })}>
+                    🔄 다시 사용
+                  </button>
+                  <button className="btn btn-secondary">
+                    👀 상세 보기
+                  </button>
+                  {item.type === 'review' && (
+                    <button className="btn btn-secondary">
+                      🔍 다시 검토
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {filteredHistory.length === 0 && (
+            <div className="text-center" style={{ padding: '60px 20px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📂</div>
+              <h3 style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px' }}>
+                검색 결과가 없습니다
+              </h3>
+              <p style={{ color: '#666' }}>
+                다른 검색어나 필터를 사용해보세요.
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSettings } from "../../contexts/SettingsContext";
+import { useUser } from "../../contexts/UserContext";
 
 
 const ComposePage = () => {
   const { settings } = useSettings();
+  const { user } = useUser();
   const [emailData, setEmailData] = useState({
     to: '',
     subject: '',
@@ -238,24 +240,33 @@ const ComposePage = () => {
 
     setIsGenerating(true);
     try {
-      // 1) 전체 개선본 받아오기
       const res = await fetch("http://localhost:5000/api/review", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           emailText: emailData.content,
           tone: settings.defaultTone,
           analysisLevel: settings.analysisLevel,
-          autoCorrection: true
+          autoCorrection: false
         })
       });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const data = await res.json();
 
-      // 2) 원문/개선본 문장별 분할
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // 기존 방식: 원문/개선본 문장별 분할
       const origSents = emailData.content.split(/(?<=[.?!])\s+/);
       const improvedSents = data.improvedVersion.split(/(?<=[.?!])\s+/);
 
-      // 3) before/after 쌍 생성
       const stepSuggestions = origSents.map((before, i) => ({
         type: 'auto',
         title: '문장별 개선 제안',
@@ -264,19 +275,15 @@ const ComposePage = () => {
         after: improvedSents[i] || before
       }));
 
-      // 4) state 업데이트
       setSuggestions(stepSuggestions);
 
     } catch (err) {
-      console.error("단계별 검토 실패:", err);
-      alert("검토 요청에 실패했습니다.");
+      console.error("AI 추천 실패:", err);
+      alert("AI 추천 요청에 실패했습니다: " + err.message);
     } finally {
       setIsGenerating(false);
     }
   };
-
-
-
 
   const applySuggestion = (suggestion) => {
     setEmailData(prev => ({
@@ -287,39 +294,51 @@ const ComposePage = () => {
     setSuggestions(prev => prev.filter(s => s !== suggestion));
   };
 
-
   // === sendToReview 함수 전체 ===
   const sendToReview = async () => {
-  if (!emailData.content.trim()) {
-    alert('메일 내용을 입력해주세요.');
-    return;
-  }
+    if (!emailData.content.trim()) {
+      alert('메일 내용을 입력해주세요.');
+      return;
+    }
 
-  setIsGenerating(true);
-  try {
-    const res = await fetch("http://localhost:5000/api/review", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        emailText: emailData.content,
-        tone: settings.defaultTone,
-        analysisLevel: settings.analysisLevel,
-        autoCorrection: true
-      })
-    });
+    setIsGenerating(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/review", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          emailText: emailData.content,
+          tone: settings.defaultTone,
+          analysisLevel: settings.analysisLevel,
+          autoCorrection: true
+        })
+      });
 
-    const data = await res.json();
-    // 1) 전체 본문을 개선된 버전으로 교체
-    setEmailData(prev => ({ ...prev, content: data.improvedVersion }));
-    // 2) 사이드바에는 충고만 보여주기
-    setSuggestions(data.suggestions);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
 
-  } catch (err) {
-    console.error("검토 실패:", err);
-    alert("검토 요청에 실패했습니다.");
-  }
-  setIsGenerating(false);
-};
+      const data = await res.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // 1) 전체 본문을 개선된 버전으로 교체
+      setEmailData(prev => ({ ...prev, content: data.improvedVersion }));
+      
+      // 2) 사이드바에는 충고만 보여주기 (기존 방식 유지)
+      setSuggestions(data.suggestions);
+
+    } catch (err) {
+      console.error("검토 실패:", err);
+      alert("검토 요청에 실패했습니다: " + err.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
 
   const clearAll = () => {
@@ -678,7 +697,6 @@ const ComposePage = () => {
                         )}
                       </div>
                     ))}
-
                   </div>
                 )}
               </div>

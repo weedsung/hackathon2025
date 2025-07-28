@@ -8,12 +8,25 @@ const jwt = require('jsonwebtoken');
 function auth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ message: '인증 필요' });
-  const token = authHeader.split(' ')[1];
+  
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return res.status(401).json({ message: '토큰 형식이 올바르지 않습니다.' });
+  }
+  
+  const token = parts[1];
+  
+  // 토큰 형식 검증 (JWT는 3개의 부분으로 구성)
+  if (!token.includes('.') || token.split('.').length !== 3) {
+    return res.status(401).json({ message: '유효하지 않은 토큰 형식입니다.' });
+  }
+  
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
     req.user = decoded;
     next();
   } catch (err) {
+    console.error('토큰 검증 오류:', err.message);
     res.status(401).json({ message: '토큰이 유효하지 않습니다.' });
   }
 }

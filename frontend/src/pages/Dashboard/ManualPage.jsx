@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchReplyGuides } from '../../api/replyGuide';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 
 const defaultTemplates = [
   {
@@ -40,23 +41,28 @@ const defaultTemplates = [
   }
 ];
 
-function ManualPage({ userId }) {
+function ManualPage() {
+  const { user } = useUser();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [templates, setTemplates] = useState(defaultTemplates);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!userId) return; // userId 없으면 호출하지 않음
-    fetchReplyGuides(userId)
+    // ReplyGuide는 인증이 필요하지 않으므로 항상 호출
+    setLoading(true);
+    fetchReplyGuides()
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) setTemplates(data);
       })
-      .catch(() => {
-        // 에러 발생 시 아무것도 하지 않음(기존 데이터 유지)
-      });
-  }, [userId]);
+      .catch((error) => {
+        console.log('템플릿 로드 실패, 기본 데이터 사용:', error);
+        // 에러 발생 시 기본 데이터 유지
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   // 카테고리 정의 및 아이콘 매핑
   const categories = [
@@ -155,7 +161,16 @@ function ManualPage({ userId }) {
 
         {/* 템플릿 목록 */}
         <div style={{ flex: 1 }}>
-          {filteredTemplates.map((template, index) => (
+          {loading && (
+            <div className="text-center" style={{ padding: '40px 20px' }}>
+              <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
+              <p style={{ color: '#666' }}>템플릿을 불러오는 중...</p>
+            </div>
+          )}
+          
+          {!loading && (
+            <>
+              {filteredTemplates.map((template, index) => (
             <div key={template.id} className="card">
               <div className="flex justify-between items-start mb-4">
                 <div style={{ flex: 1 }}>
@@ -220,13 +235,15 @@ function ManualPage({ userId }) {
             </div>
           ))}
 
-          {filteredTemplates.length === 0 && (
-            <div className="text-center" style={{ padding: '60px 20px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
-              <p style={{ color: '#666' }}>
-                검색 결과가 없습니다. 다른 키워드로 검색해보세요.
-              </p>
-            </div>
+              {filteredTemplates.length === 0 && (
+                <div className="text-center" style={{ padding: '60px 20px' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+                  <p style={{ color: '#666' }}>
+                    검색 결과가 없습니다. 다른 키워드로 검색해보세요.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
