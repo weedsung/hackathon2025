@@ -90,7 +90,6 @@ Provide comprehensive analysis and improvements following the specified JSON for
     const response = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
-        { role: "user", content: prompt },
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
